@@ -1,0 +1,22 @@
+{
+   "port": 9000,
+   "sources": [
+      {
+         "category": "frontend",
+         "type": "github",
+         "organization": "LaxarJS",
+         "oauthToken": ""
+      },
+      {
+         "category": "backend",
+         "type": "gitweb",
+         "serverUrl": "http://my-git-server/",
+         "repositoriesRoot": "public/backend"
+      }
+   ],
+   "categories": {
+      "frontend": "Frontend",
+      "backend": "Backend",
+      "other": "Sonstiges"
+   }
+}

@@ -1,0 +1,148 @@
+[
+   {
+      "_links": {
+         "self": {
+            "href": "/"
+         },
+         "categories": {
+            "href": "/categories"
+         }
+      }
+   },
+   {
+      "_links": {
+         "self": {
+            "href": "/categories"
+         },
+         "category": [
+            {
+               "href": "/categories/frontend"
+            },
+            {
+               "href": "/categories/backend"
+            },
+            {
+               "href": "/categories/other"
+            }
+         ]
+      },
+      "_embedded": {
+         "category": [
+            {
+               "_links": {
+                  "self": {
+                     "href": "/categories/frontend"
+                  },
+                  "repositories": {
+                     "href": "/categories/frontend/repositories"
+                  }
+               },
+               "_embedded": {
+                  "repositories": {
+                     "_links": {
+                        "self": {
+                           "href": "/categories/frontend/repositories"
+                        },
+                        "repository": [
+                           {
+                              "_links": {
+                                 "self": {
+                                    "href": "/repositories/0"
+                                 }
+                              }
+                           },
+                           {
+                              "_links": {
+                                 "self": {
+                                    "href": "/repositories/1"
+                                 }
+                              }
+                           }
+                        ]
+                     },
+                     "_embedded": {
+                        "repository": [
+                           {
+                              "_links": {
+                                 "self": {
+                                    "href": "/repositories/0"
+                                 },
+                                 "releases": {
+                                    "href": "/repositories/0/releases"
+                                 }
+                              },
+                              "title": "Laxar",
+                              "pushedAt": "2015-06-05T09:42:11Z"
+                           },
+                           {
+                              "_links": {
+                                 "self": {
+                                    "href": "/repositories/1"
+                                 },
+                                 "releases": {
+                                    "href": "/repositories/1/releases"
+                                 }
+                              },
+                              "title": "Laxar Patterns",
+                              "pushedAt": "2015-06-02T09:42:11Z"
+                           }
+                        ]
+                     }
+                  }
+               },
+               "title": "Frontend"
+            },
+            {
+               "_links": {
+                  "self": {
+                     "href": "/categories/backend"
+                  }
+               },
+               "title": "Backend"
+            },
+            {
+               "_links": {
+                  "self": {
+                     "href": "/categories/other"
+                  }
+               },
+               "title": "Sonstiges"
+            }
+         ]
+      }
+   },
+   {
+      "_links": {
+         "self": {
+            "href": "/repositories/0/releases"
+         },
+         "release": [
+            {
+               "href": "/repositories/0/releases/master",
+               "title": "master"
+            },
+            {
+               "href": "/repositories/0/releases/master-0.x",
+               "title": "master 0.x"
+            },
+            {
+               "href": "/repositories/0/releases/0.1.x",
+               "title": "v0.1.x"
+            },
+            {
+               "href": "/repositories/0/releases/0.2.x",
+               "title": "v0.2.x"
+            }
+         ]
+      }
+   },
+   {
+      "_links": {
+         "self": {
+            "href": "/repositories/0/releases/0.1.x"
+         }
+      },
+      "title": "v0.1.x",
+      "changelog": "bla bla bla"
+   }
+]
