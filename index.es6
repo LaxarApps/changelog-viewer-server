@@ -162,6 +162,8 @@ function addRoutes( config, router, broker ) {
          } );
    } );
 
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
    const now = () => new Date().getTime()
    const stillValid = ( { timestamp } ) => timestamp > now() - ( config.maxAgeMs || 2 * 60 * 60 * 1000 );
    let resourcesCache = {};

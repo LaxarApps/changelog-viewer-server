@@ -59,7 +59,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
       const proto = {
          getReleases: () => {
             const url = urlTemplates.REPOSITORY_GIT_URL.replace( '[repository]', repositoryData.id );
-            return runGitLsRemote( url, '--tags' )
+            return runGitLsRemote( url )
                .then( text => {
                   const versionData = text.split( '\n' )
                      .reduce( ( acc, line ) => {
@@ -113,9 +113,9 @@ export default ( { serverUrl, repositoriesRoot } ) => {
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   function runGitLsRemote( repository, args ) {
+   function runGitLsRemote( repositoryUrl ) {
       return new Promise( ( resolve, reject ) => {
-         const command = `git ls-remote ${args} ${repository}`;
+         const command = `git ls-remote --tags ${repositoryUrl}`;
 
          exec( command, ( err, stdout, stderr ) => {
             if( err ) {

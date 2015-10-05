@@ -215,6 +215,8 @@ function addRoutes(config, router, broker) {
       });
    });
 
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
    var now = function now() {
       return new Date().getTime();
    };
