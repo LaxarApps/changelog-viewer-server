@@ -349,7 +349,7 @@ function resourceForReleasesByRepository(repository, releases) {
    releases.forEach(function (release) {
       releasesResource.link(relations.RELEASE, {
          href: hrefForReleaseByRepository(repository, release),
-         title: release.name
+         title: release.title
       });
    });
    return releasesResource;

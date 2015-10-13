@@ -70,7 +70,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                            if( !( release in acc ) ) {
                               acc[ release ] = {
                                  versions: [],
-                                 name: release
+                                 title: release
                               }
                            }
 

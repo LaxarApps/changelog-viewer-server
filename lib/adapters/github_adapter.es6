@@ -64,7 +64,7 @@ export default ( { category, organization, oauthToken } ) => {
                         if( !( release in acc ) ) {
                            acc[ release ] = {
                               versions: [],
-                              name: release
+                              title: release
                            }
                         }
 
@@ -104,8 +104,6 @@ export default ( { category, organization, oauthToken } ) => {
          } );
       return repository;
    }
-
-
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
