@@ -17,12 +17,18 @@ export default ( maxAgeMs=TWO_HOURS ) => {
    const api = {
       getText: ( url, headers ) => {
          const cacheEntry = cache[ url ];
+         console.log( url );
          if( cacheEntry && stillValid( cacheEntry ) ) {
             return Promise.resolve( cacheEntry.responseData );
          }
 
          return fetch( url, { headers: headers || {} } )
-            .then( response => response.text() )
+            .then( response => {
+               if( [ '4', '5' ].indexOf( `${response.status}`.charAt( 0 ) ) > -1 ) {
+                  return null;
+               }
+               return response.text();
+            } )
             .then( responseData => {
                cache[ url ] = { responseData, timestamp: now() };
                return responseData;
