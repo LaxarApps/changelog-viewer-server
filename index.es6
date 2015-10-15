@@ -177,10 +177,8 @@ function addRoutes( config, router, broker ) {
          } );
 
          if( url in resourcesCache && stillValid( resourcesCache[ url ] ) ) {
-            console.log( `resource cache HIT for ${url}` );
             return processResourceBuilderResult( resourcesCache[ url ].resource );
          }
-         console.log( `resource cache MISS for ${url}` );
 
          Promise.race( [ timeoutPromise, resourceBuilder( match.params, req, res ) ] )
             .then( resource => {
@@ -266,8 +264,8 @@ const hrefForReleaseByRepository = ( repository, release ) => {
    } );
 };
 function resourceForRelease( repository, release ) {
-   const releasehref = hrefForReleaseByRepository( repository, release );
-   return new HalResource( release, releasehref );
+   const releaseHref = hrefForReleaseByRepository( repository, release );
+   return new HalResource( release, releaseHref );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

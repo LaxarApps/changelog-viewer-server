@@ -235,10 +235,8 @@ function addRoutes(config, router, broker) {
          });
 
          if (url in resourcesCache && stillValid(resourcesCache[url])) {
-            console.log('resource cache HIT for ' + url);
             return processResourceBuilderResult(resourcesCache[url].resource);
          }
-         console.log('resource cache MISS for ' + url);
 
          _es6Promise.Promise.race([timeoutPromise, resourceBuilder(match.params, req, res)]).then(function (resource) {
             if (resource) {
@@ -334,8 +332,8 @@ var hrefForReleaseByRepository = function hrefForReleaseByRepository(repository,
    });
 };
 function resourceForRelease(repository, release) {
-   var releasehref = hrefForReleaseByRepository(repository, release);
-   return new _hal.Resource(release, releasehref);
+   var releaseHref = hrefForReleaseByRepository(repository, release);
+   return new _hal.Resource(release, releaseHref);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

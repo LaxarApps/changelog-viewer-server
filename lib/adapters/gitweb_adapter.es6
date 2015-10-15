@@ -30,9 +30,10 @@ export default ( { serverUrl, repositoriesRoot } ) => {
    function getRepositories() {
       return getText( urlTemplates.REPOSITORIES, headers )
          .then( text => {
-            return Promise.all( text.split( '\n' )
+            return Promise.all( ( text || '' ).split( '\n' )
                .map( line => line.split( ' ' )[0] )
-               .map( repository => getRepositoryById( repository ) ) );
+               .filter( repositoryId => !!repositoryId )
+               .map( repositoryId => getRepositoryById( repositoryId ) ) );
          } );
    }
 
@@ -42,11 +43,10 @@ export default ( { serverUrl, repositoriesRoot } ) => {
       const url = urlTemplates.REPOSITORY.replace( '[repository]', repositoryId );
       return getText( url, headers )
          .then( text => {
-            const pushedAt = xml( text ).find( '> feed > updated' ).first().text();
             return {
                id: repositoryId,
                name: repositoryId,
-               pushed_at: pushedAt
+               pushed_at: text ? xml( text ).find( '> feed > updated' ).first().text() : null
             };
          } )
          .then( createRepository );

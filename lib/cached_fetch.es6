@@ -17,7 +17,6 @@ export default ( maxAgeMs=TWO_HOURS ) => {
    const api = {
       getText: ( url, headers ) => {
          const cacheEntry = cache[ url ];
-         console.log( url );
          if( cacheEntry && stillValid( cacheEntry ) ) {
             return Promise.resolve( cacheEntry.responseData );
          }
@@ -34,7 +33,7 @@ export default ( maxAgeMs=TWO_HOURS ) => {
                return responseData;
             } );
       },
-      getJson: ( url, headers ) => api.getText( url, headers ).then( JSON.parse )
+      getJson: ( url, headers ) => api.getText( url, headers ).then( text => text ? JSON.parse( text ) : null )
    };
 
    return api;
