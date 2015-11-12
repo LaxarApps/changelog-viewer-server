@@ -76,7 +76,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                         const match = VERSION_MATCHER.exec( line.trim() );
                         if( match ) {
                            const [ name, major, minor, patch ] = match;
-                           const release = `${major}.${minor}.x`;
+                           const release = `v${major}.${minor}.x`;
                            if( !( release in acc ) ) {
                               acc[ release ] = {
                                  versions: [],
@@ -96,12 +96,12 @@ export default ( { serverUrl, repositoriesRoot } ) => {
 
          getReleaseByVersion: ( version ) => {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.name );
-
-            const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
+            const release = version.indexOf( 'v' ) === 0 ? version.substr( 1 ) : version;
+            const releaseUrl = baseUrl.replace( '[branch]', `release-${release}` );
             return getText( releaseUrl, headers )
                .then( changelog => {
                   return {
-                     title: `v${version}`,
+                     title: `v${release}`,
                      changelog: changelog
                   }
                }, err => {
