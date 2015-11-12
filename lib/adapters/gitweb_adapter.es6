@@ -4,7 +4,7 @@
  */
 import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
-import xml from 'xml-selector';
+import { parseString as parseXmlString } from 'xml2js';
 import { exec } from 'child_process';
 
 
@@ -43,10 +43,20 @@ export default ( { serverUrl, repositoriesRoot } ) => {
       const url = urlTemplates.REPOSITORY.replace( '[repository]', repositoryId );
       return getText( url, headers )
          .then( text => {
+            if( !text ) {
+               return null;
+            }
+
+            return new Promise( ( resolve, reject ) => {
+               parseXmlString( text, ( err, result ) => err ? reject( err ) : resolve( result ) );
+            } );
+         } )
+         .then( tree => {
+            const updated = ( tree && tree.feed && tree.feed.updated && tree.feed.updated[0] ) || null;
             return {
                id: repositoryId,
                name: repositoryId,
-               pushed_at: text ? xml( text ).find( '> feed > updated' ).first().text() : null
+               pushed_at: updated
             };
          } )
          .then( createRepository );
