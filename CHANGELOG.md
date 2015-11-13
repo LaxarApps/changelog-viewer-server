@@ -3,6 +3,7 @@
 ## Last Changes
 
 
+## v0.2.2
 ## v0.2.1
 
 - [#3](https://github.com/LaxarApps/changelog-viewer-server/issues/3): fixed release links in github adapter
