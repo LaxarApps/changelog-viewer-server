@@ -60,15 +60,15 @@ export default ( { category, organization, oauthToken } ) => {
                      const match = VERSION_MATCHER.exec( version );
                      if( match ) {
                         const [ name, major, minor, patch ] = match;
-                        const release = `${major}.${minor}.x`;
-                        if( !( release in acc ) ) {
-                           acc[ release ] = {
+                        const versionTag = `v${major}.${minor}.x`;
+                        if( !( versionTag in acc ) ) {
+                           acc[ versionTag ] = {
                               versions: [],
-                              title: release
+                              title: versionTag
                            }
                         }
 
-                        acc[ release ].versions.push( name );
+                        acc[ versionTag ].versions.push( name );
                      }
                      return acc;
                   }, {} );
@@ -80,7 +80,6 @@ export default ( { category, organization, oauthToken } ) => {
 
          getReleaseByVersion: ( version ) => {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.name );
-
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
             return getText( releaseUrl, headers )
                .then( changelog => {
