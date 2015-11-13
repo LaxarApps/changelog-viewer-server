@@ -75,7 +75,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                      .reduce( ( acc, line ) => {
                         const match = VERSION_MATCHER.exec( line.trim() );
                         if( match ) {
-                           const [ , major, minor, patch ] = match;
+                           const [ name, major, minor, patch ] = match;
                            const versionTag = `v${major}.${minor}.x`;
                            if( !( versionTag in acc ) ) {
                               acc[ versionTag ] = {
