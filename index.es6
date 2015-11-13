@@ -156,8 +156,12 @@ function addRoutes( config, router, broker ) {
             if( !repository ) {
                return null;
             }
+            if( releaseId.indexOf( 'v' ) !== 0 ) {
+               return null;
+            }
 
-            return repository.getReleaseByVersion( releaseId )
+            const version = releaseId.substr( 1 );
+            return repository.getReleaseByVersion( version )
                .then( release => resourceForRelease( repository, release ) );
          } );
    } );
@@ -234,9 +238,15 @@ function resourceForRepositories( repositories, { embedded=false, href=null}={} 
    repositories.forEach( repository => {
       const repositoryResource = resourceForRepository( repository );
 
-      repositoriesResource.link( relations.REPOSITORY, hrefForRepository( repository ) );
       if( embedded ) {
+         repositoriesResource.link( relations.REPOSITORY, hrefForRepository( repository ) );
          repositoriesResource.embed( relations.REPOSITORY, repositoryResource, false );
+      }
+      else {
+         repositoriesResource.link( relations.REPOSITORY, {
+            href: hrefForRepository( repository ),
+            title: repositoryResource.title
+         } );
       }
    } );
    return repositoriesResource;
