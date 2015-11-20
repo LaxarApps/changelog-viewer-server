@@ -32,6 +32,10 @@ var _libAdapter_broker = require('./lib/adapter_broker');
 
 var _libAdapter_broker2 = _interopRequireDefault(_libAdapter_broker);
 
+var _libCached_fetch = require('./lib/cached_fetch');
+
+var _libCached_fetch2 = _interopRequireDefault(_libCached_fetch);
+
 new _es6Promise.Promise(function (resolve, reject) {
    (0, _fs.readFile)('./config.json', function (err, string) {
       return err ? reject(err) : resolve(string);
@@ -49,6 +53,7 @@ var routes = {
    ROOT: '/',
    CATEGORIES: '/categories',
    CATEGORY_BY_ID: '/categories/:categoryId',
+   COMPONENT_MAP: '/component-map',
    REPOSITORIES_BY_CATEGORY: '/categories/:categoryId/repositories',
    REPOSITORIES: '/repositories',
    REPOSITORY_BY_ID: '/repositories/:globalRepositoryId',
@@ -58,6 +63,7 @@ var routes = {
 var relations = {
    CATEGORY: 'category',
    CATEGORIES: 'categories',
+   COMPONENT_MAP: 'component-map',
    REPOSITORIES: 'repositories',
    REPOSITORY: 'repository',
    RELEASE: 'release',
@@ -94,10 +100,16 @@ function startServer(config) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function addRoutes(config, router, broker) {
+   var _cachedFetch = (0, _libCached_fetch2['default'])();
+
+   var getJson = _cachedFetch.getJson;
 
    addHalRoute(routes.ROOT, function () {
       var resource = new _hal.Resource({}, routes.ROOT);
       resource.link(relations.CATEGORIES, routes.CATEGORIES);
+      if (config.componentMapUrl) {
+         resource.link(relations.COMPONENT_MAP, routes.COMPONENT_MAP);
+      }
       return resource;
    });
 
@@ -127,6 +139,12 @@ function addRoutes(config, router, broker) {
 
       return broker.findCategoryById(categoryId).then(function (category) {
          return category ? resourceForCategory(category) : null;
+      });
+   });
+
+   addHalRoute(routes.COMPONENT_MAP, function () {
+      return getJson(config.componentMapUrl).then(function (componentMap) {
+         return componentMap ? resourceForComponentMap(componentMap) : null;
       });
    });
 
@@ -271,6 +289,15 @@ function addRoutes(config, router, broker) {
          }
       });
    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var hrefForComponentMap = function hrefForComponentMap() {
+   return createUrl(routes.COMPONENT_MAP, {});
+};
+function resourceForComponentMap(componentMap) {
+   return new _hal.Resource(componentMap, hrefForComponentMap());
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
