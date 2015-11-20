@@ -10,6 +10,7 @@ import connect from 'connect';
 import Router from 'routes';
 import url from 'url';
 import createBroker from './lib/adapter_broker';
+import cachedFetch from './lib/cached_fetch';
 
 
 new Promise( ( resolve, reject ) => {
@@ -26,6 +27,7 @@ const routes = {
    ROOT: '/',
    CATEGORIES: '/categories',
    CATEGORY_BY_ID: '/categories/:categoryId',
+   COMPONENT_MAP: '/component-map',
    REPOSITORIES_BY_CATEGORY: '/categories/:categoryId/repositories',
    REPOSITORIES: '/repositories',
    REPOSITORY_BY_ID: '/repositories/:globalRepositoryId',
@@ -35,6 +37,7 @@ const routes = {
 const relations = {
    CATEGORY: 'category',
    CATEGORIES: 'categories',
+   COMPONENT_MAP: 'component-map',
    REPOSITORIES: 'repositories',
    REPOSITORY: 'repository',
    RELEASE: 'release',
@@ -73,9 +76,14 @@ function startServer( config ) {
 
 function addRoutes( config, router, broker ) {
 
+   const { getJson } = cachedFetch();
+
    addHalRoute( routes.ROOT, () => {
       const resource = new HalResource( {}, routes.ROOT );
       resource.link( relations.CATEGORIES, routes.CATEGORIES );
+      if( config.componentMapUrl ) {
+         resource.link( relations.COMPONENT_MAP, routes.COMPONENT_MAP );
+      }
       return resource;
    } );
 
@@ -104,6 +112,11 @@ function addRoutes( config, router, broker ) {
    addHalRoute( routes.CATEGORY_BY_ID, ( { categoryId } ) => {
       return broker.findCategoryById( categoryId )
          .then( category => category ? resourceForCategory( category ) : null );
+   } );
+
+   addHalRoute( routes.COMPONENT_MAP, () => {
+      return getJson( config.componentMapUrl )
+         .then( componentMap => componentMap ? resourceForComponentMap( componentMap ) : null );
    } );
 
    addHalRoute( routes.REPOSITORIES_BY_CATEGORY, ( { categoryId } ) => {
@@ -218,6 +231,13 @@ function addRoutes( config, router, broker ) {
 
       } );
    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const hrefForComponentMap = () => createUrl( routes.COMPONENT_MAP, {} );
+function resourceForComponentMap( componentMap ) {
+   return new HalResource( componentMap, hrefForComponentMap() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

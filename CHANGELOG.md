@@ -2,6 +2,7 @@
 
 ## Last Changes
 
+- [#6](https://github.com/LaxarApps/changelog-viewer-server/issues/6): component map: added possibilty to proxy component map data
 - [#5](https://github.com/LaxarApps/changelog-viewer-server/issues/5): repositories: added organization and unify names
 
 

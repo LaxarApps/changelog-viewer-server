@@ -18,5 +18,6 @@
       "frontend": "Frontend",
       "backend": "Backend",
       "other": "Sonstiges"
-   }
+   },
+   "componentMapUrl": "http://my-component-map.json"
 }
