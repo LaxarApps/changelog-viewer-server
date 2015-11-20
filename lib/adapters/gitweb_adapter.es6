@@ -53,10 +53,13 @@ export default ( { serverUrl, repositoriesRoot } ) => {
          } )
          .then( tree => {
             const updated = ( tree && tree.feed && tree.feed.updated && tree.feed.updated[0] ) || null;
+            // fuzzy logic for organizations: take the path fragment right before the *.git part
+            const [ , organization, name ] = repositoryId.match( /([^\/]+)\/([^\/]+)\.git$/ );
             return {
                id: repositoryId,
-               name: repositoryId,
-               pushed_at: updated
+               name: name,
+               organization: organization,
+               pushedAt: updated
             };
          } )
          .then( createRepository );
