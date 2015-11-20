@@ -2,6 +2,8 @@
 
 ## Last Changes
 
+- [#5](https://github.com/LaxarApps/changelog-viewer-server/issues/5): repositories: added organization and unify names
+
 
 ## v0.2.2
 ## v0.2.1

@@ -93,15 +93,24 @@ export default ( { category, organization, oauthToken } ) => {
          }
       };
 
-      let repository = Object.create( proto );
-      Object.keys( repositoryData )
-         .forEach( key => {
-            Object.defineProperty( repository, key, {
-               enumerable: true,
-               value: repositoryData[ key ]
-            } );
-         } );
-      return repository;
+      return Object.create( proto, {
+         id: {
+            enumerable: true,
+            value: repositoryData.id
+         },
+         name: {
+            enumerable: true,
+            value: repositoryData.name
+         },
+         pushedAt: {
+            enumerable: true,
+            value: repositoryData.pushed_at
+         },
+         organization: {
+            enumerable: true,
+            value: repositoryData.full_name.split( '/' )[0]
+         }
+      } );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -326,7 +326,8 @@ function resourceForRepository(repository) {
    var repositoryHref = hrefForRepository(repository);
    var repositoryResource = new _hal.Resource({
       title: repository.name,
-      pushedAt: repository.pushed_at
+      pushedAt: repository.pushedAt,
+      organization: repository.organization
    }, repositoryHref);
    repositoryResource.link(relations.RELEASES, repositoryHref + '/releases');
    return repositoryResource;
