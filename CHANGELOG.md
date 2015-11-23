@@ -2,6 +2,7 @@
 
 ## Last Changes
 
+- [#7](https://github.com/LaxarApps/changelog-viewer-server/issues/7): gitweb adapter: use the gitweb "api" to determine tags instead of running `git ls-remote`
 
 ## v0.3.0
 
