@@ -88,7 +88,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                   const tds = ( table && table.tr && table.tr.map( tr => tr.td && tr.td[1] && tr.td[1] ) );
                   const as = tds && tds.map( td => td.a && td.a[0] && td.a[0] );
                   const texts = as && as.map( a => a._ && a._.trim() );
-                  return texts;
+                  return texts || [];
                } )
                .then( tags => {
                   const versionData = tags.reduce( (acc, tag) => {
