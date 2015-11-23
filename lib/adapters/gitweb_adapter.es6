@@ -13,10 +13,10 @@ export default ( { serverUrl, repositoriesRoot } ) => {
    const urlTemplates = {
       REPOSITORIES: `${serverUrl}gitweb/?a=project_index;pf=${repositoriesRoot}`,
       REPOSITORY: `${serverUrl}gitweb/?p=[repository];a=atom`,
-      REPOSITORY_GIT_URL: `${serverUrl}[repository]`,
+      REPOSITORY_TAGS: `${serverUrl}gitweb/?p=[repository];a=tags`,
       CHANGELOG: `${serverUrl}gitweb/?p=[repository];a=blob_plain;f=CHANGELOG.md;hb=refs/heads/[branch]`
    };
-   const VERSION_MATCHER = /refs\/tags\/v(\d+)\.(\d+)\.(\d+)$/;
+   const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
    const { getText } = cachedFetch();
    const api = {
@@ -71,26 +71,42 @@ export default ( { serverUrl, repositoriesRoot } ) => {
 
       const proto = {
          getReleases: () => {
-            const url = urlTemplates.REPOSITORY_GIT_URL.replace( '[repository]', repositoryData.id );
-            return runGitLsRemote( url )
+            const url = urlTemplates.REPOSITORY_TAGS.replace( '[repository]', repositoryData.id );
+            return getText( url, headers )
                .then( text => {
-                  const versionData = text.split( '\n' )
-                     .reduce( ( acc, line ) => {
-                        const match = VERSION_MATCHER.exec( line.trim() );
-                        if( match ) {
-                           const [ name, major, minor, patch ] = match;
-                           const versionTag = `v${major}.${minor}.x`;
-                           if( !( versionTag in acc ) ) {
-                              acc[ versionTag ] = {
-                                 versions: [],
-                                 title: versionTag
-                              }
-                           }
+                  if( !text ) {
+                     return null;
+                  }
 
-                           acc[ versionTag ].versions.push( name );
+                  return new Promise( ( resolve, reject ) => {
+                     parseXmlString( text, ( err, result ) => err ? reject( err ) : resolve( result ) );
+                  } );
+               } )
+               .then( tree => {
+                  const body = ( tree && tree.html && tree.html.body && tree.html.body[0] );
+                  const table = ( body && body.table && body.table[0] );
+                  const tds = ( table && table.tr && table.tr.map( tr => tr.td && tr.td[1] && tr.td[1] ) );
+                  const as = tds && tds.map( td => td.a && td.a[0] && td.a[0] );
+                  const texts = as && as.map( a => a._ && a._.trim() );
+                  return texts;
+               } )
+               .then( tags => {
+                  const versionData = tags.reduce( (acc, tag) => {
+                     const match = VERSION_MATCHER.exec( tag );
+                     if( match ) {
+                        const [ name, major, minor, patch ] = match;
+                        const versionTag = `v${major}.${minor}.x`;
+                        if( !( versionTag in acc ) ) {
+                           acc[ versionTag ] = {
+                              versions: [],
+                              title: versionTag
+                           }
                         }
-                        return acc;
-                     }, {} );
+
+                        acc[ versionTag ].versions.push( `refs/tags/${name}` );
+                     }
+                     return acc;
+                  }, {} );
 
                   return Object.keys( versionData ).map( key => versionData[ key ] );
                } );
@@ -98,7 +114,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
 
 
          getReleaseByVersion: ( version ) => {
-            const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.name );
+            const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.id );
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
             return getText( releaseUrl, headers )
                .then( changelog => {
