@@ -15,10 +15,11 @@ export default ( { category, organization, oauthToken } ) => {
    };
    const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
-   const { getText, getJson } = cachedFetch();
+   const { getText, getJson, clearCache } = cachedFetch();
    const api = {
       getRepositories,
-      getRepositoryById
+      getRepositoryById,
+      clearCache: clearCache
    };
    let headers = {};
 

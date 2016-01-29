@@ -12,7 +12,8 @@ export default ( config ) => {
       getCategories,
       getRepositories,
       findCategoryById,
-      findRepositoryById
+      findRepositoryById,
+      clearCache
    };
    const adaptersByCategory = createAdaptersByCategory();
    const adaptersById = createAdaptersById( adaptersByCategory );
@@ -54,6 +55,12 @@ export default ( config ) => {
    function findRepositoryById( adapterId, repositoryId ) {
       return adaptersById[ adapterId ].getRepositoryById( repositoryId )
          .then( repositoryDecorator( adaptersById[ adapterId ] ) );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function clearCache() {
+      Object.keys( adaptersById ).forEach( id => adaptersById[ id ].clearCache() );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

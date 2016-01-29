@@ -18,10 +18,11 @@ export default ( { serverUrl, repositoriesRoot } ) => {
    };
    const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
-   const { getText } = cachedFetch();
+   const { getText, clearCache } = cachedFetch();
    const api = {
       getRepositories,
-      getRepositoryById
+      getRepositoryById,
+      clearCache: clearCache
    };
    const headers = {};
 

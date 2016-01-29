@@ -33,7 +33,8 @@ export default ( maxAgeMs=TWO_HOURS ) => {
                return responseData;
             } );
       },
-      getJson: ( url, headers ) => api.getText( url, headers ).then( text => text ? JSON.parse( text ) : null )
+      getJson: ( url, headers ) => api.getText( url, headers ).then( text => text ? JSON.parse( text ) : null ),
+      clearCache: () => cache = {}
    };
 
    return api;
