@@ -15,13 +15,13 @@ export default ( { category, organization, oauthToken } ) => {
    };
    const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
-   const { getText, getJson, clearCache } = cachedFetch();
+   const { getText, getJson, clearCache } = cachedFetch( 0 );
    const api = {
       getRepositories,
       getRepositoryById,
       clearCache: clearCache
    };
-   let headers = {};
+   let headers = { 'user-agent': 'node.js' };
 
    if( !oauthToken ) {
       console.warn( `No oauth token for github adapter configured
@@ -35,7 +35,7 @@ export default ( { category, organization, oauthToken } ) => {
 
    function getRepositories() {
       return getJson( urlTemplates.REPOSITORIES, headers )
-         .then( repositories => repositories.map( createRepository ));
+         .then( repositories => repositories.map( createRepository ) );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

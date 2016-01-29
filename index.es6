@@ -79,7 +79,7 @@ function startServer( config ) {
 function addRoutes( config, { router, broker } ) {
 
    let resourcesCache = {};
-   const { getJson, clearCache } = cachedFetch();
+   const { getJson, clearCache } = cachedFetch( 0 );
 
    // HAL routes
 
@@ -187,23 +187,30 @@ function addRoutes( config, { router, broker } ) {
 
    // low level routes
 
-   router.addRoute( routes.CACHE, ( req, res ) => {
-      if( req.method !== 'DELETE' ) {
-         res.statusCode = 405;
+   router.addRoute( routes.CACHE, ( { method }, res ) => {
+
+      if( method === 'DELETE' || method === 'POST' ) {
+         clearCache();
+         resourcesCache = {};
+         broker.clearCache();
+
+         res.statusCode = 204;
+         if( method === 'POST' ) {
+            res.statusCode = 202;
+            refreshCache();
+         }
+
          res.end();
          return;
       }
-      res.statusCode = 204;
-      res.end();
 
-      clearCache();
-      resourcesCache = {};
-      broker.clearCache();
+      res.statusCode = 405;
+      res.end();
    } );
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   const now = () => new Date().getTime()
+   const now = () => new Date().getTime();
    const stillValid = ( { timestamp } ) => timestamp > now() - ( config.maxAgeMs || 2 * 60 * 60 * 1000 );
 
    function addHalRoute( route, resourceBuilder ) {
@@ -230,6 +237,7 @@ function addRoutes( config, { router, broker } ) {
                const errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
                if( error instanceof Error ) {
                   console.error( `An error occurred while serving request to ${route}: ${error}` );
+                  console.error( `URL: ${url}` );
                   console.error( 'Stack: ', error.stack );
                }
 
@@ -251,6 +259,54 @@ function addRoutes( config, { router, broker } ) {
          }
 
       } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   let alreadyRefreshing = false;
+   function refreshCache() {
+      if( alreadyRefreshing ) {
+         return Promise.resolve();
+      }
+
+      alreadyRefreshing = true;
+
+      const baseUrl = `http://localhost:${config.port}`;
+      const startTime = Date.now();
+      return getJson( `${baseUrl}${routes.CATEGORIES}` )
+         .then( followAllLinksRecursively.bind( null, [] ) )
+         .then( links => {
+            console.log( `Refreshed cache in ${Date.now() - startTime}ms. Followed ${links.length} links.` );
+         }, err => console.error( err ) )
+         .then( () => alreadyRefreshing = false );
+
+      function followAllLinksRecursively( seenLinks, halResponse ) {
+         if( !halResponse || !halResponse._links ) {
+            return Promise.resolve( seenLinks );
+         }
+
+         const links = Object.keys( halResponse._links )
+            .filter( relation => relation !== 'self' )
+            .map( relation => halResponse._links[ relation ] )
+            .map( linkObject => Array.isArray( linkObject ) ? linkObject : [ linkObject ] )
+            .reduce( ( links, linkObject ) => {
+               return linkObject.reduce( ( objectLinks, { href } ) => {
+                  if( seenLinks.indexOf( href ) === -1 ) {
+                     seenLinks.push( href );
+                     return [ ...objectLinks, `${baseUrl}${href}` ];
+                  }
+                  return objectLinks;
+               }, links );
+            }, [] );
+
+         return links.reduce( ( promise, link ) => {
+            return promise
+               .then( seenLinks => {
+                  return getJson( link )
+                     .then( response => followAllLinksRecursively( seenLinks, response ) );
+               } );
+         }, Promise.resolve( seenLinks ) );
+      }
    }
 }
 
