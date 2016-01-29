@@ -25,6 +25,7 @@ new Promise( ( resolve, reject ) => {
 
 const routes = {
    ROOT: '/',
+   CACHE: '/cache',
    CATEGORIES: '/categories',
    CATEGORY_BY_ID: '/categories/:categoryId',
    COMPONENT_MAP: '/component-map',
@@ -35,6 +36,7 @@ const routes = {
    REPOSITORY_RELEASE_BY_ID: '/repositories/:globalRepositoryId/releases/:releaseId'
 };
 const relations = {
+   CACHE: 'cache',
    CATEGORY: 'category',
    CATEGORIES: 'categories',
    COMPONENT_MAP: 'component-map',
@@ -66,7 +68,7 @@ function startServer( config ) {
       match.fn( req, res, match );
    } );
 
-   addRoutes( config, router, broker );
+   addRoutes( config, { router, broker } );
 
    createServer( server ).listen( config.port || 8000 );
 
@@ -74,12 +76,16 @@ function startServer( config ) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function addRoutes( config, router, broker ) {
+function addRoutes( config, { router, broker } ) {
 
-   const { getJson } = cachedFetch();
+   let resourcesCache = {};
+   const { getJson, clearCache } = cachedFetch();
+
+   // HAL routes
 
    addHalRoute( routes.ROOT, () => {
       const resource = new HalResource( {}, routes.ROOT );
+      resource.link( relations.CACHE, routes.CACHE );
       resource.link( relations.CATEGORIES, routes.CATEGORIES );
       if( config.componentMapUrl ) {
          resource.link( relations.COMPONENT_MAP, routes.COMPONENT_MAP );
@@ -179,11 +185,26 @@ function addRoutes( config, router, broker ) {
          } );
    } );
 
+   // low level routes
+
+   router.addRoute( routes.CACHE, ( req, res ) => {
+      if( req.method !== 'DELETE' ) {
+         res.statusCode = 405;
+         res.end();
+         return;
+      }
+      res.statusCode = 204;
+      res.end();
+
+      clearCache();
+      resourcesCache = {};
+      broker.clearCache();
+   } );
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    const now = () => new Date().getTime()
    const stillValid = ( { timestamp } ) => timestamp > now() - ( config.maxAgeMs || 2 * 60 * 60 * 1000 );
-   let resourcesCache = {};
 
    function addHalRoute( route, resourceBuilder ) {
       router.addRoute( route, ( req, res, match ) => {

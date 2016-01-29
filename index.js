@@ -51,6 +51,7 @@ new _es6Promise.Promise(function (resolve, reject) {
 
 var routes = {
    ROOT: '/',
+   CACHE: '/cache',
    CATEGORIES: '/categories',
    CATEGORY_BY_ID: '/categories/:categoryId',
    COMPONENT_MAP: '/component-map',
@@ -61,6 +62,7 @@ var routes = {
    REPOSITORY_RELEASE_BY_ID: '/repositories/:globalRepositoryId/releases/:releaseId'
 };
 var relations = {
+   CACHE: 'cache',
    CATEGORY: 'category',
    CATEGORIES: 'categories',
    COMPONENT_MAP: 'component-map',
@@ -92,20 +94,29 @@ function startServer(config) {
       match.fn(req, res, match);
    });
 
-   addRoutes(config, router, broker);
+   addRoutes(config, { router: router, broker: broker });
 
    (0, _http.createServer)(server).listen(config.port || 8000);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function addRoutes(config, router, broker) {
+function addRoutes(config, _ref) {
+   var router = _ref.router;
+   var broker = _ref.broker;
+
+   var resourcesCache = {};
+
    var _cachedFetch = (0, _libCached_fetch2['default'])();
 
    var getJson = _cachedFetch.getJson;
+   var clearCache = _cachedFetch.clearCache;
+
+   // HAL routes
 
    addHalRoute(routes.ROOT, function () {
       var resource = new _hal.Resource({}, routes.ROOT);
+      resource.link(relations.CACHE, routes.CACHE);
       resource.link(relations.CATEGORIES, routes.CATEGORIES);
       if (config.componentMapUrl) {
          resource.link(relations.COMPONENT_MAP, routes.COMPONENT_MAP);
@@ -134,8 +145,8 @@ function addRoutes(config, router, broker) {
       });
    });
 
-   addHalRoute(routes.CATEGORY_BY_ID, function (_ref) {
-      var categoryId = _ref.categoryId;
+   addHalRoute(routes.CATEGORY_BY_ID, function (_ref2) {
+      var categoryId = _ref2.categoryId;
 
       return broker.findCategoryById(categoryId).then(function (category) {
          return category ? resourceForCategory(category) : null;
@@ -148,8 +159,8 @@ function addRoutes(config, router, broker) {
       });
    });
 
-   addHalRoute(routes.REPOSITORIES_BY_CATEGORY, function (_ref2) {
-      var categoryId = _ref2.categoryId;
+   addHalRoute(routes.REPOSITORIES_BY_CATEGORY, function (_ref3) {
+      var categoryId = _ref3.categoryId;
 
       return broker.findCategoryById(categoryId).then(function (category) {
          if (!category) {
@@ -175,8 +186,8 @@ function addRoutes(config, router, broker) {
       });
    });
 
-   addHalRoute(routes.REPOSITORY_BY_ID, function (_ref3) {
-      var globalRepositoryId = _ref3.globalRepositoryId;
+   addHalRoute(routes.REPOSITORY_BY_ID, function (_ref4) {
+      var globalRepositoryId = _ref4.globalRepositoryId;
 
       var _globalRepositoryId$split = globalRepositoryId.split('__');
 
@@ -190,8 +201,8 @@ function addRoutes(config, router, broker) {
       });
    });
 
-   addHalRoute(routes.REPOSITORY_RELEASES, function (_ref4) {
-      var globalRepositoryId = _ref4.globalRepositoryId;
+   addHalRoute(routes.REPOSITORY_RELEASES, function (_ref5) {
+      var globalRepositoryId = _ref5.globalRepositoryId;
 
       var _globalRepositoryId$split3 = globalRepositoryId.split('__');
 
@@ -211,9 +222,9 @@ function addRoutes(config, router, broker) {
       });
    });
 
-   addHalRoute(routes.REPOSITORY_RELEASE_BY_ID, function (_ref5) {
-      var globalRepositoryId = _ref5.globalRepositoryId;
-      var releaseId = _ref5.releaseId;
+   addHalRoute(routes.REPOSITORY_RELEASE_BY_ID, function (_ref6) {
+      var globalRepositoryId = _ref6.globalRepositoryId;
+      var releaseId = _ref6.releaseId;
 
       var _globalRepositoryId$split4 = globalRepositoryId.split('__');
 
@@ -237,16 +248,31 @@ function addRoutes(config, router, broker) {
       });
    });
 
+   // low level routes
+
+   router.addRoute(routes.CACHE, function (req, res) {
+      if (req.method !== 'DELETE') {
+         res.statusCode = 405;
+         res.end();
+         return;
+      }
+      res.statusCode = 204;
+      res.end();
+
+      clearCache();
+      resourcesCache = {};
+      broker.clearCache();
+   });
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    var now = function now() {
       return new Date().getTime();
    };
-   var stillValid = function stillValid(_ref6) {
-      var timestamp = _ref6.timestamp;
+   var stillValid = function stillValid(_ref7) {
+      var timestamp = _ref7.timestamp;
       return timestamp > now() - (config.maxAgeMs || 2 * 60 * 60 * 1000);
    };
-   var resourcesCache = {};
 
    function addHalRoute(route, resourceBuilder) {
       router.addRoute(route, function (req, res, match) {
@@ -320,12 +346,12 @@ var hrefForRepositoriesByCategory = function hrefForRepositoriesByCategory(categ
    return createUrl(routes.REPOSITORIES_BY_CATEGORY, { categoryId: category.id });
 };
 function resourceForRepositories(repositories) {
-   var _ref7 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+   var _ref8 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-   var _ref7$embedded = _ref7.embedded;
-   var embedded = _ref7$embedded === undefined ? false : _ref7$embedded;
-   var _ref7$href = _ref7.href;
-   var href = _ref7$href === undefined ? null : _ref7$href;
+   var _ref8$embedded = _ref8.embedded;
+   var embedded = _ref8$embedded === undefined ? false : _ref8$embedded;
+   var _ref8$href = _ref8.href;
+   var href = _ref8$href === undefined ? null : _ref8$href;
 
    var repositoriesResource = new _hal.Resource({}, href || hrefForRepositories());
    repositories.forEach(function (repository) {
