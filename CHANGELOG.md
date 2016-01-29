@@ -2,6 +2,9 @@
 
 ## Last Changes
 
+
+## v0.4.0
+
 - [#9](https://github.com/LaxarApps/changelog-viewer-server/issues/9): cache: added support for clearing caches
 
 
