@@ -18,7 +18,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
    };
    const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
-   const { getText, clearCache } = cachedFetch();
+   const { getText, clearCache } = cachedFetch( 0 );
    const api = {
       getRepositories,
       getRepositoryById,
@@ -138,23 +138,6 @@ export default ( { serverUrl, repositoriesRoot } ) => {
             } );
          } );
       return repository;
-   }
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   function runGitLsRemote( repositoryUrl ) {
-      return new Promise( ( resolve, reject ) => {
-         const command = `git ls-remote --tags ${repositoryUrl}`;
-
-         exec( command, ( err, stdout, stderr ) => {
-            if( err ) {
-               console.error( stderr );
-               return reject( err );
-            }
-
-            resolve( stdout );
-         } );
-      } );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

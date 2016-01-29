@@ -9,16 +9,18 @@ const TWO_HOURS = 2 * 60 * 60 * 1000;
 
 export default ( maxAgeMs=TWO_HOURS ) => {
 
-   const now = () => new Date().getTime()
+   const now = () => new Date().getTime();
    const stillValid = ( { timestamp } ) => timestamp > now() - maxAgeMs;
 
    let cache = {};
 
    const api = {
       getText: ( url, headers ) => {
-         const cacheEntry = cache[ url ];
-         if( cacheEntry && stillValid( cacheEntry ) ) {
-            return Promise.resolve( cacheEntry.responseData );
+         if( maxAgeMs > 0 ) {
+            const cacheEntry = cache[ url ];
+            if( cacheEntry && stillValid( cacheEntry ) ) {
+               return Promise.resolve( cacheEntry.responseData );
+            }
          }
 
          return fetch( url, { headers: headers || {} } )
@@ -29,7 +31,9 @@ export default ( maxAgeMs=TWO_HOURS ) => {
                return response.text();
             } )
             .then( responseData => {
-               cache[ url ] = { responseData, timestamp: now() };
+               if( maxAgeMs > 0 ) {
+                  cache[ url ] = { responseData, timestamp: now() };
+               }
                return responseData;
             } );
       },
