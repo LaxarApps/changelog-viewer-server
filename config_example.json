@@ -19,5 +19,6 @@
       "backend": "Backend",
       "other": "Sonstiges"
    },
+   "resourceCacheMaxAgeMs": 7200000,
    "componentMapUrl": "http://my-component-map.json"
 }

@@ -210,9 +210,6 @@ function addRoutes( config, { router, broker } ) {
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   const now = () => new Date().getTime();
-   const stillValid = ( { timestamp } ) => timestamp > now() - ( config.maxAgeMs || 2 * 60 * 60 * 1000 );
-
    function addHalRoute( route, resourceBuilder ) {
       router.addRoute( route, ( req, res, match ) => {
 
@@ -228,7 +225,7 @@ function addRoutes( config, { router, broker } ) {
          Promise.race( [ timeoutPromise, resourceBuilder( match.params, req, res ) ] )
             .then( resource => {
                if( resource ) {
-                  resourcesCache[ url ] = { timestamp: now(), resource };
+                  resourcesCache[ url ] = { timestamp: Date.now(), resource };
                }
                return resource;
             } )
@@ -259,6 +256,18 @@ function addRoutes( config, { router, broker } ) {
          }
 
       } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function stillValid( { timestamp } ) {
+      if( !( 'resourceCacheMaxAgeMs' in config ) ) {
+         config.resourceCacheMaxAgeMs = 2 * 60 * 60 * 1000;
+      }
+      if( config.resourceCacheMaxAgeMs < 0 ) {
+         return true;
+      }
+      return timestamp > Date.now() - config.resourceCacheMaxAgeMs;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

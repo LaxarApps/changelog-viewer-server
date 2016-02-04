@@ -1,24 +1,24 @@
-/**
- * Copyright 2015 aixigo AG
- * Released under the MIT license.
- */'use strict';var _slicedToArray = (function () {function sliceIterator(arr, i) {var _arr = [];var _n = true;var _d = false;var _e = undefined;try {for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {_arr.push(_s.value);if (i && _arr.length === i) break;}} catch (err) {_d = true;_e = err;} finally {try {if (!_n && _i['return']) _i['return']();} finally {if (_d) throw _e;}}return _arr;}return function (arr, i) {if (Array.isArray(arr)) {return arr;} else if (Symbol.iterator in Object(arr)) {return sliceIterator(arr, i);} else {throw new TypeError('Invalid attempt to destructure non-iterable instance');}};})();function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { 'default': obj };}function _toConsumableArray(arr) {if (Array.isArray(arr)) {for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];return arr2;} else {return Array.from(arr);}}var _fs = require(
-'fs');var _http = require(
-'http');var _es6Promise = require(
-'es6-promise');var _hal = require(
-'hal');var _connect = require(
-'connect');var _connect2 = _interopRequireDefault(_connect);var _routes = require(
-'routes');var _routes2 = _interopRequireDefault(_routes);var _url = require(
-'url');var _url2 = _interopRequireDefault(_url);var _libAdapter_broker = require(
-'./lib/adapter_broker');var _libAdapter_broker2 = _interopRequireDefault(_libAdapter_broker);var _libCached_fetch = require(
-'./lib/cached_fetch');var _libCached_fetch2 = _interopRequireDefault(_libCached_fetch);
+'use strict';var _slicedToArray = function () {function sliceIterator(arr, i) {var _arr = [];var _n = true;var _d = false;var _e = undefined;try {for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {_arr.push(_s.value);if (i && _arr.length === i) break;}} catch (err) {_d = true;_e = err;} finally {try {if (!_n && _i["return"]) _i["return"]();} finally {if (_d) throw _e;}}return _arr;}return function (arr, i) {if (Array.isArray(arr)) {return arr;} else if (Symbol.iterator in Object(arr)) {return sliceIterator(arr, i);} else {throw new TypeError("Invalid attempt to destructure non-iterable instance");}};}(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Copyright 2015 aixigo AG
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Released under the MIT license.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */var _fs = require('fs');var _http = require('http');var _es6Promise = require('es6-promise');var _hal = require('hal');var _connect = require('connect');var _connect2 = _interopRequireDefault(_connect);var _routes = require('routes');var _routes2 = _interopRequireDefault(_routes);var _url = require('url');var _url2 = _interopRequireDefault(_url);var _adapter_broker = require('./lib/adapter_broker');var _adapter_broker2 = _interopRequireDefault(_adapter_broker);var _cached_fetch = require('./lib/cached_fetch');var _cached_fetch2 = _interopRequireDefault(_cached_fetch);function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}function _toConsumableArray(arr) {if (Array.isArray(arr)) {for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {arr2[i] = arr[i];}return arr2;} else {return Array.from(arr);}}
+
+
+
+
+
+
+
+
+
 
 
 new _es6Promise.Promise(function (resolve, reject) {
    (0, _fs.readFile)('./config.json', function (err, string) {return err ? reject(err) : resolve(string);});}).
 
 then(function (string) {return JSON.parse(string);}).
-then(startServer, function (err) {return console.error('An error occurred while reading the config file (config.json): ' + err);})['catch'](
-function (err) {
+then(startServer, function (err) {return console.error('An error occurred while reading the config file (config.json): ' + err);}).
+catch(function (err) {
    console.error('An error occurred while starting the server: ' + err);
    console.error('Stack: ', err.stack);});
 
@@ -50,12 +50,12 @@ var relations = {
 
 function startServer(config) {
 
-   var router = new _routes2['default']();
-   var server = (0, _connect2['default'])();
-   var broker = (0, _libAdapter_broker2['default'])(config);
+   var router = new _routes2.default();
+   var server = (0, _connect2.default)();
+   var broker = (0, _adapter_broker2.default)(config);
 
    server.use(function (req, res) {
-      var path = _url2['default'].parse(req.url).pathname;
+      var path = _url2.default.parse(req.url).pathname;
       var match = router.match(path);
 
       if (!match) {
@@ -79,7 +79,7 @@ function startServer(config) {
 function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.broker;
 
    var resourcesCache = {};var _cachedFetch = 
-   (0, _libCached_fetch2['default'])(0);var getJson = _cachedFetch.getJson;var clearCache = _cachedFetch.clearCache;
+   (0, _cached_fetch2.default)(0);var getJson = _cachedFetch.getJson;var clearCache = _cachedFetch.clearCache;
 
    // HAL routes
 
@@ -149,14 +149,14 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
 
 
-   addHalRoute(routes.REPOSITORY_BY_ID, function (_ref4) {var globalRepositoryId = _ref4.globalRepositoryId;var _globalRepositoryId$split = 
-      globalRepositoryId.split('__');var _globalRepositoryId$split2 = _slicedToArray(_globalRepositoryId$split, 2);var adapterId = _globalRepositoryId$split2[0];var repositoryId = _globalRepositoryId$split2[1];
+   addHalRoute(routes.REPOSITORY_BY_ID, function (_ref4) {var globalRepositoryId = _ref4.globalRepositoryId;var _globalRepositoryId$s = 
+      globalRepositoryId.split('__');var _globalRepositoryId$s2 = _slicedToArray(_globalRepositoryId$s, 2);var adapterId = _globalRepositoryId$s2[0];var repositoryId = _globalRepositoryId$s2[1];
       return broker.findRepositoryById(adapterId, repositoryId).
       then(function (repository) {return repository ? resourceForRepository(repository) : null;});});
 
 
-   addHalRoute(routes.REPOSITORY_RELEASES, function (_ref5) {var globalRepositoryId = _ref5.globalRepositoryId;var _globalRepositoryId$split3 = 
-      globalRepositoryId.split('__');var _globalRepositoryId$split32 = _slicedToArray(_globalRepositoryId$split3, 2);var adapterId = _globalRepositoryId$split32[0];var repositoryId = _globalRepositoryId$split32[1];
+   addHalRoute(routes.REPOSITORY_RELEASES, function (_ref5) {var globalRepositoryId = _ref5.globalRepositoryId;var _globalRepositoryId$s3 = 
+      globalRepositoryId.split('__');var _globalRepositoryId$s4 = _slicedToArray(_globalRepositoryId$s3, 2);var adapterId = _globalRepositoryId$s4[0];var repositoryId = _globalRepositoryId$s4[1];
       return broker.findRepositoryById(adapterId, repositoryId).
       then(function (repository) {
          if (!repository) {
@@ -168,8 +168,8 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
 
 
-   addHalRoute(routes.REPOSITORY_RELEASE_BY_ID, function (_ref6) {var globalRepositoryId = _ref6.globalRepositoryId;var releaseId = _ref6.releaseId;var _globalRepositoryId$split4 = 
-      globalRepositoryId.split('__');var _globalRepositoryId$split42 = _slicedToArray(_globalRepositoryId$split4, 2);var adapterId = _globalRepositoryId$split42[0];var repositoryId = _globalRepositoryId$split42[1];
+   addHalRoute(routes.REPOSITORY_RELEASE_BY_ID, function (_ref6) {var globalRepositoryId = _ref6.globalRepositoryId;var releaseId = _ref6.releaseId;var _globalRepositoryId$s5 = 
+      globalRepositoryId.split('__');var _globalRepositoryId$s6 = _slicedToArray(_globalRepositoryId$s5, 2);var adapterId = _globalRepositoryId$s6[0];var repositoryId = _globalRepositoryId$s6[1];
       return broker.findRepositoryById(adapterId, repositoryId).
       then(function (repository) {
          if (!repository) {
@@ -210,9 +210,6 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   var now = function now() {return new Date().getTime();};
-   var stillValid = function stillValid(_ref8) {var timestamp = _ref8.timestamp;return timestamp > now() - (config.maxAgeMs || 2 * 60 * 60 * 1000);};
-
    function addHalRoute(route, resourceBuilder) {
       router.addRoute(route, function (req, res, match) {var 
 
@@ -228,12 +225,12 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
          _es6Promise.Promise.race([timeoutPromise, resourceBuilder(match.params, req, res)]).
          then(function (resource) {
             if (resource) {
-               resourcesCache[url] = { timestamp: now(), resource: resource };}
+               resourcesCache[url] = { timestamp: Date.now(), resource: resource };}
 
             return resource;}).
 
-         then(processResourceBuilderResult)['catch'](
-         function (error) {
+         then(processResourceBuilderResult).
+         catch(function (error) {
             var errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
             if (error instanceof Error) {
                console.error('An error occurred while serving request to ' + route + ': ' + error);
@@ -259,6 +256,18 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
 
 
+
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function stillValid(_ref8) {var timestamp = _ref8.timestamp;
+      if (!('resourceCacheMaxAgeMs' in config)) {
+         config.resourceCacheMaxAgeMs = 2 * 60 * 60 * 1000;}
+
+      if (config.resourceCacheMaxAgeMs < 0) {
+         return true;}
+
+      return timestamp > Date.now() - config.resourceCacheMaxAgeMs;}
 
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -407,5 +416,4 @@ function createUrl(route, params) {
 
 function writeCommonHeaders(res) {
    res.setHeader('Content-Type', 'application/hal+json');}
-
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=/Users/awilden/work/laxar/changelog-viewer-server/index.js.map

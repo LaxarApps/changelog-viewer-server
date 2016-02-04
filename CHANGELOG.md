@@ -2,6 +2,8 @@
 
 ## Last Changes
 
+- [#12](https://github.com/LaxarApps/changelog-viewer-server/issues/12): cache: added possibility to enable eternal caching
+
 
 ## v0.5.0
 
