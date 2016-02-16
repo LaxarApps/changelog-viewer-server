@@ -4,6 +4,7 @@
  */
 import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
+import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
 export default ( { category, organization, oauthToken } ) => {
@@ -13,7 +14,6 @@ export default ( { category, organization, oauthToken } ) => {
       TAGS: `https://api.github.com/repos/${organization}/[repository]/tags?per_page=100`,
       CHANGELOG: `https://raw.githubusercontent.com/${organization}/[repository]/[branch]/CHANGELOG.md`
    };
-   const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
    const { getText, getJson, clearCache } = cachedFetch( 0 );
    const api = {
@@ -35,7 +35,7 @@ export default ( { category, organization, oauthToken } ) => {
 
    function getRepositories() {
       return getJson( urlTemplates.REPOSITORIES, headers )
-         .then( repositories => repositories.map( createRepository ) );
+         .then( repositories => Promise.all( repositories.map( createRepository ) ) );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,8 +50,14 @@ export default ( { category, organization, oauthToken } ) => {
 
    function createRepository( repositoryData ) {
 
+      let cachedReleases;
+
       const proto = {
-         getReleases: () => {
+         getReleases() {
+            if( cachedReleases ) {
+               return Promise.resolve( cachedReleases );
+            }
+
             const url = urlTemplates.TAGS.replace( '[repository]', repositoryData.name );
 
             return getJson( url, headers )
@@ -75,11 +81,12 @@ export default ( { category, organization, oauthToken } ) => {
                   }, {} );
 
                   return Object.keys( versionData ).map( key => versionData[ key ] );
-               } );
+               } )
+               .then( releases => cachedReleases = releases );
          },
 
 
-         getReleaseByVersion: ( version ) => {
+         getReleaseByVersion( version ) {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.name );
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
             return getText( releaseUrl, headers )
@@ -94,24 +101,32 @@ export default ( { category, organization, oauthToken } ) => {
          }
       };
 
-      return Object.create( proto, {
-         id: {
-            enumerable: true,
-            value: repositoryData.id
-         },
-         name: {
-            enumerable: true,
-            value: repositoryData.name
-         },
-         pushedAt: {
-            enumerable: true,
-            value: repositoryData.pushed_at
-         },
-         organization: {
-            enumerable: true,
-            value: repositoryData.full_name.split( '/' )[0]
-         }
-      } );
+      return proto.getReleases()
+         .then( getMostRecentVersionFromReleases )
+         .then( mostRecentVersion => {
+            return Object.create( proto, {
+               id: {
+                  enumerable: true,
+                  value: repositoryData.id
+               },
+               name: {
+                  enumerable: true,
+                  value: repositoryData.name
+               },
+               pushedAt: {
+                  enumerable: true,
+                  value: repositoryData.pushed_at
+               },
+               organization: {
+                  enumerable: true,
+                  value: repositoryData.full_name.split( '/' )[0]
+               },
+               mostRecentVersion: {
+                  enumerable: true,
+                  value: mostRecentVersion
+               }
+            } )
+         } );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

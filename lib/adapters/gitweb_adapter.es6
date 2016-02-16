@@ -6,6 +6,7 @@ import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
 import { parseString as parseXmlString } from 'xml2js';
 import { exec } from 'child_process';
+import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
 export default ( { serverUrl, repositoriesRoot } ) => {
@@ -16,7 +17,6 @@ export default ( { serverUrl, repositoriesRoot } ) => {
       REPOSITORY_TAGS: `${serverUrl}gitweb/?p=[repository];a=tags`,
       CHANGELOG: `${serverUrl}gitweb/?p=[repository];a=blob_plain;f=CHANGELOG.md;hb=refs/heads/[branch]`
    };
-   const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
    const { getText, clearCache } = cachedFetch( 0 );
    const api = {
@@ -70,8 +70,14 @@ export default ( { serverUrl, repositoriesRoot } ) => {
 
    function createRepository( repositoryData ) {
 
+      let cachedReleases = null;
+
       const proto = {
-         getReleases: () => {
+         getReleases() {
+            if( cachedReleases ) {
+               return Promise.resolve( cachedReleases );
+            }
+
             const url = urlTemplates.REPOSITORY_TAGS.replace( '[repository]', repositoryData.id );
             return getText( url, headers )
                .then( text => {
@@ -86,8 +92,8 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                .then( tree => {
                   const body = ( tree && tree.html && tree.html.body && tree.html.body[0] );
                   const table = ( body && body.table && body.table[0] );
-                  const tds = ( table && table.tr && table.tr.map( tr => tr.td && tr.td[1] && tr.td[1] ) );
-                  const as = tds && tds.map( td => td.a && td.a[0] && td.a[0] );
+                  const tds = ( table && table.tr && table.tr.map( tr => tr.td && tr.td[1] ) );
+                  const as = tds && tds.map( td => td.a && td.a[0] );
                   const texts = as && as.map( a => a._ && a._.trim() );
                   return texts || [];
                } )
@@ -104,17 +110,18 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                            }
                         }
 
-                        acc[ versionTag ].versions.push( `refs/tags/${name}` );
+                        acc[ versionTag ].versions.push( name );
                      }
                      return acc;
                   }, {} );
 
                   return Object.keys( versionData ).map( key => versionData[ key ] );
-               } );
+               } )
+               .then( releases => cachedReleases = releases );
          },
 
 
-         getReleaseByVersion: ( version ) => {
+         getReleaseByVersion( version ) {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.id );
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
             return getText( releaseUrl, headers )
@@ -129,15 +136,20 @@ export default ( { serverUrl, repositoriesRoot } ) => {
          }
       };
 
-      let repository = Object.create( proto );
-      Object.keys( repositoryData )
-         .forEach( key => {
-            Object.defineProperty( repository, key, {
-               enumerable: true,
-               value: repositoryData[ key ]
-            } );
+      return proto.getReleases()
+         .then( getMostRecentVersionFromReleases )
+         .then( mostRecentVersion => {
+            let repository = Object.create( proto );
+            repositoryData.mostRecentVersion = mostRecentVersion;
+            Object.keys( repositoryData )
+               .forEach( key => {
+                  Object.defineProperty( repository, key, {
+                     enumerable: true,
+                     value: repositoryData[ key ]
+                  } );
+               } );
+            return repository;
          } );
-      return repository;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

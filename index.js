@@ -370,7 +370,8 @@ function resourceForRepository(repository) {
    var repositoryResource = new _hal.Resource({ 
       title: repository.name, 
       pushedAt: repository.pushedAt, 
-      organization: repository.organization }, 
+      organization: repository.organization, 
+      mostRecentVersion: repository.mostRecentVersion }, 
    repositoryHref);
    repositoryResource.link(relations.RELEASES, repositoryHref + '/releases');
    return repositoryResource;}
