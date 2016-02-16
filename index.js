@@ -121,8 +121,12 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
 
    addHalRoute(routes.COMPONENT_MAP, function () {
-      return getJson(config.componentMapUrl).
-      then(function (componentMap) {return componentMap ? resourceForComponentMap(componentMap) : null;});});
+      return readComponentMap(config.componentMapUrl).
+      then(function (componentMap) {return componentMap ? resourceForComponentMap(componentMap) : null;}, function (err) {
+         console.error(err);
+         console.error(err.stack);
+         return null;});});
+
 
 
    addHalRoute(routes.REPOSITORIES_BY_CATEGORY, function (_ref3) {var categoryId = _ref3.categoryId;
@@ -416,4 +420,22 @@ function createUrl(route, params) {
 
 function writeCommonHeaders(res) {
    res.setHeader('Content-Type', 'application/hal+json');}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function readComponentMap(componentMapUrl) {var _ref11 = 
+
+   componentMapUrl.match(/^([a-z0-9]+):\/\/(.*)$/i) || [, 'file', componentMapUrl];var _ref12 = _slicedToArray(_ref11, 3);var protocol = _ref12[1];var path = _ref12[2];
+   if (['http', 'https'].indexOf(protocol) !== -1) {
+      return (0, _cached_fetch2.default)().getJson(componentMapUrl);} else 
+
+   if (protocol === 'file') {
+      return new _es6Promise.Promise(function (resolve, reject) {
+         (0, _fs.readFile)(path, function (err, string) {return err ? reject(err) : resolve(string);});}).
+
+      then(function (string) {return JSON.parse(string);});}
+
+
+   return _es6Promise.Promise.reject(new Error('Unsupported protocol "' + protocol + '".'));}
 //# sourceMappingURL=/Users/awilden/work/laxar/changelog-viewer-server/index.js.map
