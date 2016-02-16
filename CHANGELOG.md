@@ -2,6 +2,8 @@
 
 ## Last Changes
 
+## v0.6.0
+
 - [#10](https://github.com/LaxarApps/changelog-viewer-server/issues/10): repositories: added most recent version
 - [#11](https://github.com/LaxarApps/changelog-viewer-server/issues/11): added support for reading component map from local filesystem
 - [#12](https://github.com/LaxarApps/changelog-viewer-server/issues/12): cache: added possibility to enable eternal caching
