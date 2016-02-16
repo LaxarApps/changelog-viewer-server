@@ -370,7 +370,8 @@ function resourceForRepository( repository ) {
    const repositoryResource = new HalResource( {
       title: repository.name,
       pushedAt: repository.pushedAt,
-      organization: repository.organization
+      organization: repository.organization,
+      mostRecentVersion: repository.mostRecentVersion
    }, repositoryHref );
    repositoryResource.link( relations.RELEASES, `${repositoryHref}/releases` );
    return repositoryResource;
@@ -425,8 +426,8 @@ function writeCommonHeaders( res ) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function readComponentMap( componentMapUrl ) {
-   const [ ,protocol, path ] =
-      componentMapUrl.match( /^([a-z0-9]+):\/\/(.*)$/i ) || [ ,'file', componentMapUrl ];
+   const [ , protocol, path ] =
+      componentMapUrl.match( /^([a-z0-9]+):\/\/(.*)$/i ) || [ , 'file', componentMapUrl ];
    if( [ 'http', 'https' ].indexOf( protocol ) !== -1 ) {
       return cachedFetch().getJson( componentMapUrl );
    }
