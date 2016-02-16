@@ -121,8 +121,12 @@ function addRoutes( config, { router, broker } ) {
    } );
 
    addHalRoute( routes.COMPONENT_MAP, () => {
-      return getJson( config.componentMapUrl )
-         .then( componentMap => componentMap ? resourceForComponentMap( componentMap ) : null );
+      return readComponentMap( config.componentMapUrl )
+         .then( componentMap => componentMap ? resourceForComponentMap( componentMap ) : null, err => {
+            console.error( err );
+            console.error( err.stack );
+            return null;
+         } );
    } );
 
    addHalRoute( routes.REPOSITORIES_BY_CATEGORY, ( { categoryId } ) => {
@@ -416,4 +420,22 @@ function createUrl( route, params ) {
 
 function writeCommonHeaders( res ) {
    res.setHeader( 'Content-Type', 'application/hal+json' );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function readComponentMap( componentMapUrl ) {
+   const [ ,protocol, path ] =
+      componentMapUrl.match( /^([a-z0-9]+):\/\/(.*)$/i ) || [ ,'file', componentMapUrl ];
+   if( [ 'http', 'https' ].indexOf( protocol ) !== -1 ) {
+      return cachedFetch().getJson( componentMapUrl );
+   }
+   else if( protocol === 'file' ) {
+      return new Promise( ( resolve, reject ) => {
+         readFile( path, ( err, string ) =>  err ? reject( err ) : resolve( string ) );
+      } )
+         .then( string => JSON.parse( string ) )
+   }
+
+   return Promise.reject( new Error( `Unsupported protocol "${protocol}".` ) );
 }

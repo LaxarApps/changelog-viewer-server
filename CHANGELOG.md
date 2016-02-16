@@ -2,6 +2,7 @@
 
 ## Last Changes
 
+- [#11](https://github.com/LaxarApps/changelog-viewer-server/issues/11): added support for reading component map from local filesystem
 - [#12](https://github.com/LaxarApps/changelog-viewer-server/issues/12): cache: added possibility to enable eternal caching
 
 
