@@ -2,6 +2,9 @@
 
 ## Last Changes
 
+
+## v0.6.1
+
 - [#15](https://github.com/LaxarApps/changelog-viewer-server/issues/15): repositories: fixed most recent version
 
 
