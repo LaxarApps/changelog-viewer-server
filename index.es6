@@ -341,7 +341,7 @@ function resourceForCategory( category ) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const hrefForRepositories = category => createUrl( routes.REPOSITORIES, {} );
+const hrefForRepositories = () => createUrl( routes.REPOSITORIES, {} );
 const hrefForRepositoriesByCategory = category => createUrl( routes.REPOSITORIES_BY_CATEGORY, { categoryId: category.id } );
 function resourceForRepositories( repositories, { embedded=false, href=null}={} ) {
    const repositoriesResource = new HalResource( {}, href || hrefForRepositories() );
@@ -435,7 +435,7 @@ function readComponentMap( componentMapUrl ) {
       return new Promise( ( resolve, reject ) => {
          readFile( path, ( err, string ) =>  err ? reject( err ) : resolve( string ) );
       } )
-         .then( string => JSON.parse( string ) )
+         .then( string => JSON.parse( string ) );
    }
 
    return Promise.reject( new Error( `Unsupported protocol "${protocol}".` ) );

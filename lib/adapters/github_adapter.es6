@@ -21,7 +21,7 @@ export default ( { category, organization, oauthToken } ) => {
       getRepositoryById,
       clearCache: clearCache
    };
-   let headers = { 'user-agent': 'node.js' };
+   const headers = { 'user-agent': 'node.js' };
 
    if( !oauthToken ) {
       console.warn( `No oauth token for github adapter configured
@@ -66,13 +66,13 @@ export default ( { category, organization, oauthToken } ) => {
                   const versionData = versions.reduce( ( acc, version ) => {
                      const match = VERSION_MATCHER.exec( version );
                      if( match ) {
-                        const [ name, major, minor, patch ] = match;
+                        const [ name, major, minor, /*patch*/ ] = match;
                         const versionTag = `v${major}.${minor}.x`;
                         if( !( versionTag in acc ) ) {
                            acc[ versionTag ] = {
                               versions: [],
                               title: versionTag
-                           }
+                           };
                         }
 
                         acc[ versionTag ].versions.push( name );
@@ -94,7 +94,7 @@ export default ( { category, organization, oauthToken } ) => {
                   return {
                      title: `v${version}`,
                      changelog: changelog
-                  }
+                  };
                }, err => {
                   console.log( 'rejected:', err );
                } );
@@ -125,7 +125,7 @@ export default ( { category, organization, oauthToken } ) => {
                   enumerable: true,
                   value: mostRecentVersion
                }
-            } )
+            } );
          } );
    }
 

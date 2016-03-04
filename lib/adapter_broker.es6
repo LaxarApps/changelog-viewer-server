@@ -70,7 +70,7 @@ export default ( config ) => {
          github: createGithubAdapter,
          gitweb: createGitwebAdapter
       };
-      let adapters = {};
+      const adapters = {};
       config.sources
          .forEach( ( source, index ) => {
             const factory = factories[ source.type ];
@@ -81,7 +81,7 @@ export default ( config ) => {
                adapters[ source.category ] = [];
             }
 
-            let adapter = factory( source );
+            const adapter = factory( source );
             adapter.__id = index;
             adapters[ source.category ].push( adapter );
          } );
@@ -94,7 +94,7 @@ export default ( config ) => {
       return repositories => {
          repositories.forEach( repositoryDecorator( adapter ) );
          return repositories;
-      }
+      };
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,16 +102,16 @@ export default ( config ) => {
    function repositoryDecorator( adapter ) {
       return repository => {
          if( repository ) {
-            repository.__adapterId = adapter.__id
+            repository.__adapterId = adapter.__id;
          }
          return repository;
-      }
+      };
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    function createAdaptersById( adaptersByCategory ) {
-      let adapters = {};
+      const adapters = {};
       Object.keys( adaptersByCategory )
          .map( category => adaptersByCategory[ category ] )
          .reduce( ( acc, list ) => acc.concat( list ), [] )
