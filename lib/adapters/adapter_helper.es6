@@ -4,10 +4,13 @@
  */
 export const VERSION_MATCHER = /^v(\d+)\.(\d+)\.(\d+)$/;
 
+const isNum = _ => /^[0-9]+$/.test( _ );
+
 export function getMostRecentVersionFromReleases( releases ) {
    const versionObject = releases.reduce( ( mostRecentVersion, { versions } ) => {
       return versions.reduce( ( mostRecentVersion, versionString ) => {
-         const [ name, major, minor, patch ] = VERSION_MATCHER.exec( versionString );
+         const [ , major, minor, patch ] = VERSION_MATCHER.exec( versionString )
+            .map( part => isNum( part ) ? parseInt( part, 10 ) : part );
          const versionObject = { major, minor, patch };
          if( !mostRecentVersion ) {
             return versionObject;

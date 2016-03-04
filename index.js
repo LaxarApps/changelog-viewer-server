@@ -341,7 +341,7 @@ function resourceForCategory(category) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var hrefForRepositories = function hrefForRepositories(category) {return createUrl(routes.REPOSITORIES, {});};
+var hrefForRepositories = function hrefForRepositories() {return createUrl(routes.REPOSITORIES, {});};
 var hrefForRepositoriesByCategory = function hrefForRepositoriesByCategory(category) {return createUrl(routes.REPOSITORIES_BY_CATEGORY, { categoryId: category.id });};
 function resourceForRepositories(repositories) {var _ref10 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];var _ref10$embedded = _ref10.embedded;var embedded = _ref10$embedded === undefined ? false : _ref10$embedded;var _ref10$href = _ref10.href;var href = _ref10$href === undefined ? null : _ref10$href;
    var repositoriesResource = new _hal.Resource({}, href || hrefForRepositories());

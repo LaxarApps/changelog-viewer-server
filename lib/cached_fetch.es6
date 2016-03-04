@@ -43,4 +43,4 @@ export default ( maxAgeMs=TWO_HOURS ) => {
 
    return api;
 
-}
+};
