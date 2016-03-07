@@ -93,7 +93,6 @@ function startServer( config ) {
 
 function addRoutes( config, { router, broker } ) {
 
-   let resourcesCache = {};
    const { getJson, clearCache } = cachedFetch( 0 );
 
    // HAL routes
@@ -205,20 +204,51 @@ function addRoutes( config, { router, broker } ) {
    } );
 
    // low level routes
+   let currentlyRefreshing = false;
+   let lastTimeCacheCleared = null;
+   let lastTimeCacheRefreshed = null;
+   let lastTimeFinishedInMs = null;
 
    router.addRoute( routes.CACHE, ( { method }, res ) => {
 
       if( method === 'DELETE' || method === 'POST' ) {
+         logger.info( 'Clearing all caches ...' );
          clearCache();
-         resourcesCache = {};
          broker.clearCache();
+         lastTimeCacheCleared = new Date();
 
          res.statusCode = 204;
          if( method === 'POST' ) {
+            logger.info( 'Refreshing all caches ...' );
             res.statusCode = 202;
-            refreshCache();
+            if( !currentlyRefreshing ) {
+               currentlyRefreshing = true;
+               refreshCache().then( finishedInMs => {
+                  lastTimeFinishedInMs = finishedInMs;
+                  lastTimeCacheRefreshed = new Date();
+                  currentlyRefreshing = false;
+                  logger.info( `Caches refreshed successfully in ${finishedInMs}ms` );
+               } )
+               .catch( err => {
+                  currentlyRefreshing = false;
+                  logger.error( `Failed to refresh caches: %s`, err );
+               } );
+            }
          }
 
+         res.end();
+         return;
+      }
+
+      if( method === 'GET' ) {
+         const resource = new HalResource( {
+            currentlyRefreshing,
+            lastTimeCacheCleared,
+            lastTimeCacheRefreshed,
+            lastTimeFinishedInMs
+         }, routes.CACHE );
+         writeCommonHeaders( res );
+         res.write( JSON.stringify( resource.toJSON(), null, 3 ) );
          res.end();
          return;
       }
@@ -237,17 +267,7 @@ function addRoutes( config, { router, broker } ) {
             setTimeout( reject.bind( null, 'Request timed out.' ), config.requestTimeout || 60000 );
          } );
 
-         if( url in resourcesCache && stillValid( resourcesCache[ url ] ) ) {
-            return processResourceBuilderResult( resourcesCache[ url ].resource );
-         }
-
          Promise.race( [ timeoutPromise, resourceBuilder( match.params, req, res ) ] )
-            .then( resource => {
-               if( resource ) {
-                  resourcesCache[ url ] = { timestamp: Date.now(), resource };
-               }
-               return resource;
-            } )
             .then( processResourceBuilderResult )
             .catch( error => {
                const errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
@@ -260,7 +280,6 @@ function addRoutes( config, { router, broker } ) {
                   logger.error( `An error occurred while serving request to ${route}: ${error}` );
                   logger.error( `URL: ${url}` );
                }
-               console.log( 'WTF?!', error );
 
                res.statusCode = 500;
                res.write( errorMessage );
@@ -284,35 +303,14 @@ function addRoutes( config, { router, broker } ) {
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   function stillValid( { timestamp } ) {
-      if( !( 'resourceCacheMaxAgeMs' in config ) ) {
-         config.resourceCacheMaxAgeMs = 2 * 60 * 60 * 1000;
-      }
-      if( config.resourceCacheMaxAgeMs < 0 ) {
-         return true;
-      }
-      return timestamp > Date.now() - config.resourceCacheMaxAgeMs;
-   }
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   let alreadyRefreshing = false;
    function refreshCache() {
-      if( alreadyRefreshing ) {
-         return Promise.resolve();
-      }
-
-      alreadyRefreshing = true;
 
       const seenLinks = [];
       const baseUrl = `http://localhost:${config.port}`;
       const startTime = Date.now();
-      return getJson( `${baseUrl}${routes.CATEGORIES}/frontend` )
+      return getJson( `${baseUrl}${routes.CATEGORIES}` )
          .then( followAllLinksRecursively )
-         .then( () => {
-            logger.log( `Refreshed cache in ${Date.now() - startTime}ms. Followed ${seenLinks.length} links.` );
-         }, err => logger.error( err ) )
-         .then( () => alreadyRefreshing = false );
+         .then( () => Date.now() - startTime );
 
       function followAllLinksRecursively( halResponse ) {
          if( !halResponse || !halResponse._links ) {
@@ -334,7 +332,10 @@ function addRoutes( config, { router, broker } ) {
             }, [] );
 
          return links.reduce( ( promise, link ) => {
-            return promise.then( () => getJson( link ) ).then( followAllLinksRecursively );
+            return promise
+               .then( () => getJson( link ) )
+               .catch( () => null )
+               .then( followAllLinksRecursively );
          }, Promise.resolve() );
       }
    }

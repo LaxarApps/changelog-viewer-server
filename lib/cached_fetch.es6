@@ -9,8 +9,7 @@ const TWO_HOURS = 2 * 60 * 60 * 1000;
 
 export default ( maxAgeMs=TWO_HOURS ) => {
 
-   const now = () => new Date().getTime();
-   const stillValid = ( { timestamp } ) => timestamp > now() - maxAgeMs;
+   const stillValid = ( { timestamp } ) => timestamp > Date.now() - maxAgeMs;
 
    let cache = {};
 
@@ -26,13 +25,13 @@ export default ( maxAgeMs=TWO_HOURS ) => {
          return fetch( url, { headers: headers || {} } )
             .then( response => {
                if( [ '4', '5' ].indexOf( `${response.status}`.charAt( 0 ) ) > -1 ) {
-                  return null;
+                  return Promise.reject( response );
                }
                return response.text();
             } )
             .then( responseData => {
                if( maxAgeMs > 0 ) {
-                  cache[ url ] = { responseData, timestamp: now() };
+                  cache[ url ] = { responseData, timestamp: Date.now() };
                }
                return responseData;
             } );
