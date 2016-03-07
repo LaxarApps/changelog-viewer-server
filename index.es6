@@ -9,18 +9,31 @@ import { Resource as HalResource } from 'hal';
 import connect from 'connect';
 import Router from 'routes';
 import url from 'url';
+import winston from 'winston';
 import createBroker from './lib/adapter_broker';
 import cachedFetch from './lib/cached_fetch';
 
+winston.handleExceptions( new winston.transports.File( { filename: 'logs/exceptions.log' } ) );
+const logger = new winston.Logger( {
+   exitOnError: false,
+   transports: [
+      new winston.transports.Console(),
+      new winston.transports.File( {
+         filename: 'logs/server.log',
+         maxsize: 1e+6, // rotation after 1MB
+         zippedArchive: true
+      } )
+   ]
+} );
 
 new Promise( ( resolve, reject ) => {
    readFile( './config.json', ( err, string ) =>  err ? reject( err ) : resolve( string ) );
 } )
    .then( string => JSON.parse( string ) )
-   .then( startServer, err => console.error( `An error occurred while reading the config file (config.json): ${err}` ) )
+   .then( startServer, err => logger.error( `An error occurred while reading the config file (config.json): ${err}` ) )
    .catch( err => {
-      console.error( `An error occurred while starting the server: ${err}` );
-      console.error( 'Stack: ', err.stack );
+      logger.error( `An error occurred while starting the server: ${err}` );
+      logger.error( 'Stack: ', err.stack );
    } );
 
 const routes = {
@@ -50,16 +63,18 @@ const relations = {
 
 function startServer( config ) {
 
+   logger.info( 'Started server at %s', new Date() );
+
    const router = new Router();
    const server = connect();
-   const broker = createBroker( config );
+   const broker = createBroker( logger, config );
 
    server.use( ( req, res ) => {
       const path = url.parse( req.url ).pathname;
       const match = router.match( path );
 
       if( !match ) {
-         console.warn( `Found no match for url "${req.url}".` );
+         logger.warn( `Found no match for url "${req.url}".` );
          res.statusCode = 404;
          res.end();
          return;
@@ -123,8 +138,8 @@ function addRoutes( config, { router, broker } ) {
    addHalRoute( routes.COMPONENT_MAP, () => {
       return readComponentMap( config.componentMapUrl )
          .then( componentMap => componentMap ? resourceForComponentMap( componentMap ) : null, err => {
-            console.error( err );
-            console.error( err.stack );
+            logger.error( err );
+            logger.error( err.stack );
             return null;
          } );
    } );
@@ -237,10 +252,15 @@ function addRoutes( config, { router, broker } ) {
             .catch( error => {
                const errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
                if( error instanceof Error ) {
-                  console.error( `An error occurred while serving request to ${route}: ${error}` );
-                  console.error( `URL: ${url}` );
-                  console.error( 'Stack: ', error.stack );
+                  logger.error( `An error occurred while serving request to ${route}: ${error}` );
+                  logger.error( `URL: ${url}` );
+                  logger.error( 'Stack: %s', error.stack );
                }
+               else {
+                  logger.error( `An error occurred while serving request to ${route}: ${error}` );
+                  logger.error( `URL: ${url}` );
+               }
+               console.log( 'WTF?!', error );
 
                res.statusCode = 500;
                res.write( errorMessage );
@@ -284,26 +304,27 @@ function addRoutes( config, { router, broker } ) {
 
       alreadyRefreshing = true;
 
+      const seenLinks = [];
       const baseUrl = `http://localhost:${config.port}`;
       const startTime = Date.now();
-      return getJson( `${baseUrl}${routes.CATEGORIES}` )
-         .then( followAllLinksRecursively.bind( null, [] ) )
-         .then( links => {
-            console.log( `Refreshed cache in ${Date.now() - startTime}ms. Followed ${links.length} links.` );
-         }, err => console.error( err ) )
+      return getJson( `${baseUrl}${routes.CATEGORIES}/frontend` )
+         .then( followAllLinksRecursively )
+         .then( () => {
+            logger.log( `Refreshed cache in ${Date.now() - startTime}ms. Followed ${seenLinks.length} links.` );
+         }, err => logger.error( err ) )
          .then( () => alreadyRefreshing = false );
 
-      function followAllLinksRecursively( seenLinks, halResponse ) {
+      function followAllLinksRecursively( halResponse ) {
          if( !halResponse || !halResponse._links ) {
-            return Promise.resolve( seenLinks );
+            return Promise.resolve();
          }
 
          const links = Object.keys( halResponse._links )
             .filter( relation => relation !== 'self' )
             .map( relation => halResponse._links[ relation ] )
             .map( linkObject => Array.isArray( linkObject ) ? linkObject : [ linkObject ] )
-            .reduce( ( links, linkObject ) => {
-               return linkObject.reduce( ( objectLinks, { href } ) => {
+            .reduce( ( links, linkObjects ) => {
+               return linkObjects.reduce( ( objectLinks, { href } ) => {
                   if( seenLinks.indexOf( href ) === -1 ) {
                      seenLinks.push( href );
                      return [ ...objectLinks, `${baseUrl}${href}` ];
@@ -313,12 +334,8 @@ function addRoutes( config, { router, broker } ) {
             }, [] );
 
          return links.reduce( ( promise, link ) => {
-            return promise
-               .then( seenLinks => {
-                  return getJson( link )
-                     .then( response => followAllLinksRecursively( seenLinks, response ) );
-               } );
-         }, Promise.resolve( seenLinks ) );
+            return promise.then( () => getJson( link ) ).then( followAllLinksRecursively );
+         }, Promise.resolve() );
       }
    }
 }

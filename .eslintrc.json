@@ -11,7 +11,7 @@
    "rules": {
       "semi": 1,
 
-      "no-console": 0,
+      "no-console": 1,
       "no-const-assign": 2,
       "no-debugger": 2,
       "no-var": 1,

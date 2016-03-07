@@ -7,7 +7,7 @@ import cachedFetch from '../cached_fetch';
 import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
-export default ( { category, organization, oauthToken } ) => {
+export default ( logger, { category, organization, oauthToken } ) => {
 
    const urlTemplates = {
       REPOSITORIES: `https://api.github.com/users/${organization}/repos?per_page=100`,
@@ -24,7 +24,7 @@ export default ( { category, organization, oauthToken } ) => {
    const headers = { 'user-agent': 'node.js' };
 
    if( !oauthToken ) {
-      console.warn( `No oauth token for github adapter configured
+      logger.warn( `No oauth token for github adapter configured
                      (category: ${category}, organization: ${organization})` );
    }
    else {
@@ -96,7 +96,7 @@ export default ( { category, organization, oauthToken } ) => {
                      changelog: changelog
                   };
                }, err => {
-                  console.log( 'rejected:', err );
+                  logger.log( 'rejected: %s', err );
                } );
          }
       };

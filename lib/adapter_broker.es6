@@ -6,7 +6,7 @@ import { Promise } from 'es6-promise';
 import createGithubAdapter from './adapters/github_adapter';
 import createGitwebAdapter from './adapters/gitweb_adapter';
 
-export default ( config ) => {
+export default ( logger, config ) => {
 
    const api = {
       getCategories,
@@ -81,7 +81,7 @@ export default ( config ) => {
                adapters[ source.category ] = [];
             }
 
-            const adapter = factory( source );
+            const adapter = factory( logger, source );
             adapter.__id = index;
             adapters[ source.category ].push( adapter );
          } );
