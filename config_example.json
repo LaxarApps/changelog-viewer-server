@@ -20,5 +20,6 @@
       "other": "Sonstiges"
    },
    "resourceCacheMaxAgeMs": 7200000,
+   "resourceCachePath": "caches/",
    "componentMapUrl": "http://my-component-map.json"
 }
