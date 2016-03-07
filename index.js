@@ -91,9 +91,8 @@ function startServer(config) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.broker;
+function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.broker;var _cachedFetch = 
 
-   var resourcesCache = {};var _cachedFetch = 
    (0, _cached_fetch2.default)(0);var getJson = _cachedFetch.getJson;var clearCache = _cachedFetch.clearCache;
 
    // HAL routes
@@ -205,20 +204,51 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
 
    // low level routes
+   var currentlyRefreshing = false;
+   var lastTimeCacheCleared = null;
+   var lastTimeCacheRefreshed = null;
+   var lastTimeFinishedInMs = null;
 
    router.addRoute(routes.CACHE, function (_ref7, res) {var method = _ref7.method;
 
       if (method === 'DELETE' || method === 'POST') {
+         logger.info('Clearing all caches ...');
          clearCache();
-         resourcesCache = {};
          broker.clearCache();
+         lastTimeCacheCleared = new Date();
 
          res.statusCode = 204;
          if (method === 'POST') {
+            logger.info('Refreshing all caches ...');
             res.statusCode = 202;
-            refreshCache();}
+            if (!currentlyRefreshing) {
+               currentlyRefreshing = true;
+               refreshCache().then(function (finishedInMs) {
+                  lastTimeFinishedInMs = finishedInMs;
+                  lastTimeCacheRefreshed = new Date();
+                  currentlyRefreshing = false;
+                  logger.info('Caches refreshed successfully in ' + finishedInMs + 'ms');}).
+
+               catch(function (err) {
+                  currentlyRefreshing = false;
+                  logger.error('Failed to refresh caches: %s', err);});}}
 
 
+
+
+         res.end();
+         return;}
+
+
+      if (method === 'GET') {
+         var resource = new _hal.Resource({ 
+            currentlyRefreshing: currentlyRefreshing, 
+            lastTimeCacheCleared: lastTimeCacheCleared, 
+            lastTimeCacheRefreshed: lastTimeCacheRefreshed, 
+            lastTimeFinishedInMs: lastTimeFinishedInMs }, 
+         routes.CACHE);
+         writeCommonHeaders(res);
+         res.write(JSON.stringify(resource.toJSON(), null, 3));
          res.end();
          return;}
 
@@ -237,17 +267,7 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
             setTimeout(reject.bind(null, 'Request timed out.'), config.requestTimeout || 60000);});
 
 
-         if (url in resourcesCache && stillValid(resourcesCache[url])) {
-            return processResourceBuilderResult(resourcesCache[url].resource);}
-
-
          _es6Promise.Promise.race([timeoutPromise, resourceBuilder(match.params, req, res)]).
-         then(function (resource) {
-            if (resource) {
-               resourcesCache[url] = { timestamp: Date.now(), resource: resource };}
-
-            return resource;}).
-
          then(processResourceBuilderResult).
          catch(function (error) {
             var errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
@@ -260,7 +280,6 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
                logger.error('An error occurred while serving request to ' + route + ': ' + error);
                logger.error('URL: ' + url);}
 
-            console.log('WTF?!', error);
 
             res.statusCode = 500;
             res.write(errorMessage);
@@ -284,35 +303,14 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   function stillValid(_ref8) {var timestamp = _ref8.timestamp;
-      if (!('resourceCacheMaxAgeMs' in config)) {
-         config.resourceCacheMaxAgeMs = 2 * 60 * 60 * 1000;}
-
-      if (config.resourceCacheMaxAgeMs < 0) {
-         return true;}
-
-      return timestamp > Date.now() - config.resourceCacheMaxAgeMs;}
-
-
-   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   var alreadyRefreshing = false;
    function refreshCache() {
-      if (alreadyRefreshing) {
-         return _es6Promise.Promise.resolve();}
-
-
-      alreadyRefreshing = true;
 
       var seenLinks = [];
       var baseUrl = 'http://localhost:' + config.port;
       var startTime = Date.now();
-      return getJson('' + baseUrl + routes.CATEGORIES + '/frontend').
+      return getJson('' + baseUrl + routes.CATEGORIES).
       then(followAllLinksRecursively).
-      then(function () {
-         logger.log('Refreshed cache in ' + (Date.now() - startTime) + 'ms. Followed ' + seenLinks.length + ' links.');}, 
-      function (err) {return logger.error(err);}).
-      then(function () {return alreadyRefreshing = false;});
+      then(function () {return Date.now() - startTime;});
 
       function followAllLinksRecursively(halResponse) {
          if (!halResponse || !halResponse._links) {
@@ -324,7 +322,7 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
          map(function (relation) {return halResponse._links[relation];}).
          map(function (linkObject) {return Array.isArray(linkObject) ? linkObject : [linkObject];}).
          reduce(function (links, linkObjects) {
-            return linkObjects.reduce(function (objectLinks, _ref9) {var href = _ref9.href;
+            return linkObjects.reduce(function (objectLinks, _ref8) {var href = _ref8.href;
                if (seenLinks.indexOf(href) === -1) {
                   seenLinks.push(href);
                   return [].concat(_toConsumableArray(objectLinks), ['' + baseUrl + href]);}
@@ -334,7 +332,10 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
          []);
 
          return links.reduce(function (promise, link) {
-            return promise.then(function () {return getJson(link);}).then(followAllLinksRecursively);}, 
+            return promise.
+            then(function () {return getJson(link);}).
+            catch(function () {return null;}).
+            then(followAllLinksRecursively);}, 
          _es6Promise.Promise.resolve());}}}
 
 
@@ -360,7 +361,7 @@ function resourceForCategory(category) {
 
 var hrefForRepositories = function hrefForRepositories() {return createUrl(routes.REPOSITORIES, {});};
 var hrefForRepositoriesByCategory = function hrefForRepositoriesByCategory(category) {return createUrl(routes.REPOSITORIES_BY_CATEGORY, { categoryId: category.id });};
-function resourceForRepositories(repositories) {var _ref10 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];var _ref10$embedded = _ref10.embedded;var embedded = _ref10$embedded === undefined ? false : _ref10$embedded;var _ref10$href = _ref10.href;var href = _ref10$href === undefined ? null : _ref10$href;
+function resourceForRepositories(repositories) {var _ref9 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];var _ref9$embedded = _ref9.embedded;var embedded = _ref9$embedded === undefined ? false : _ref9$embedded;var _ref9$href = _ref9.href;var href = _ref9$href === undefined ? null : _ref9$href;
    var repositoriesResource = new _hal.Resource({}, href || hrefForRepositories());
    repositories.forEach(function (repository) {
       var repositoryResource = resourceForRepository(repository);
@@ -442,9 +443,9 @@ function writeCommonHeaders(res) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function readComponentMap(componentMapUrl) {var _ref11 = 
+function readComponentMap(componentMapUrl) {var _ref10 = 
 
-   componentMapUrl.match(/^([a-z0-9]+):\/\/(.*)$/i) || [, 'file', componentMapUrl];var _ref12 = _slicedToArray(_ref11, 3);var protocol = _ref12[1];var path = _ref12[2];
+   componentMapUrl.match(/^([a-z0-9]+):\/\/(.*)$/i) || [, 'file', componentMapUrl];var _ref11 = _slicedToArray(_ref10, 3);var protocol = _ref11[1];var path = _ref11[2];
    if (['http', 'https'].indexOf(protocol) !== -1) {
       return (0, _cached_fetch2.default)().getJson(componentMapUrl);} else 
 

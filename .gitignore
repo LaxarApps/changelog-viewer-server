@@ -1,4 +1,5 @@
 /.idea
+/caches
 /config.json
 /logs
 /node_modules

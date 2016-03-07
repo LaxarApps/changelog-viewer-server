@@ -2,6 +2,7 @@
 
 ## Last Changes
 
+- [#16](https://github.com/LaxarApps/changelog-viewer-server/issues/16): caching: improved caching based on repository urls
 - [#17](https://github.com/LaxarApps/changelog-viewer-server/issues/17): logging: using winston for persistent logging
 
 

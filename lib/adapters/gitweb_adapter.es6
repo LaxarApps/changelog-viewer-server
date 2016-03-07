@@ -4,11 +4,12 @@
  */
 import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
+import repositoryResourceFetcher from '../repository_resource_fetcher';
 import { parseString as parseXmlString } from 'xml2js';
 import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
-export default ( logger, { serverUrl, repositoriesRoot } ) => {
+export default ( logger, { serverUrl, repositoriesRoot }, { resourceCachePath } ) => {
 
    const urlTemplates = {
       REPOSITORIES: `${serverUrl}gitweb/?a=project_index;pf=${repositoriesRoot}`,
@@ -17,7 +18,8 @@ export default ( logger, { serverUrl, repositoriesRoot } ) => {
       CHANGELOG: `${serverUrl}gitweb/?p=[repository];a=blob_plain;f=CHANGELOG.md;hb=refs/heads/[branch]`
    };
 
-   const { getText, clearCache } = cachedFetch( 0 );
+   const resourceFetcher = repositoryResourceFetcher( logger, { resourceCachePath } );
+   const { getText, clearCache } = cachedFetch( 60 * 60 * 1000 );
    const api = {
       getRepositories,
       getRepositoryById,
@@ -69,16 +71,13 @@ export default ( logger, { serverUrl, repositoriesRoot } ) => {
 
    function createRepository( repositoryData ) {
 
-      let cachedReleases = null;
+      const get = url => resourceFetcher.fetch( repositoryData, url, headers );
 
       const proto = {
          getReleases() {
-            if( cachedReleases ) {
-               return Promise.resolve( cachedReleases );
-            }
-
             const url = urlTemplates.REPOSITORY_TAGS.replace( '[repository]', repositoryData.id );
-            return getText( url, headers )
+
+            return get( url )
                .then( text => {
                   if( !text ) {
                      return null;
@@ -116,21 +115,33 @@ export default ( logger, { serverUrl, repositoriesRoot } ) => {
 
                   return Object.keys( versionData ).map( key => versionData[ key ] );
                } )
-               .then( releases => cachedReleases = releases );
+               .catch( err => {
+                  logger.error( `Failed to get releases for repository "${repositoryData.name}" (URL: "${url}")` );
+                  return logPossibleFetchError( err );
+               } );
          },
 
 
          getReleaseByVersion( version ) {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.id );
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
-            return getText( releaseUrl, headers )
+            return get( releaseUrl )
                .then( changelog => {
                   return {
                      title: `v${version}`,
                      changelog: changelog
                   };
-               }, err => {
-                  logger.log( 'rejected: %s', err );
+               } )
+               .catch( err => {
+                  if( err.status === 404 ) {
+                     // older releases often lack a changelog file. Hence we ignore this case here
+                     return {
+                        title: `v${version}`,
+                        changelog: ''
+                     };
+                  }
+                  logger.error( `Failed to get release for verion "${version}" (URL: "${releaseUrl}")` );
+                  return logPossibleFetchError( err );
                } );
          }
       };
@@ -149,6 +160,19 @@ export default ( logger, { serverUrl, repositoriesRoot } ) => {
                } );
             return repository;
          } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function logPossibleFetchError( err ) {
+      if( err.headers && err.status ) {
+         logger.error( `Response Status: %s`, err.status );
+         logger.error( `Response Headers: %j`, err.headers );
+      }
+      else {
+         logger.error( `Error: `, err );
+      }
+      return Promise.reject( err );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

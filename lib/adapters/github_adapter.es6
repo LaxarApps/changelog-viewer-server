@@ -4,10 +4,11 @@
  */
 import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
+import repositoryResourceFetcher from '../repository_resource_fetcher';
 import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
-export default ( logger, { category, organization, oauthToken } ) => {
+export default ( logger, { category, organization, oauthToken }, { resourceCachePath } ) => {
 
    const urlTemplates = {
       REPOSITORIES: `https://api.github.com/users/${organization}/repos?per_page=100`,
@@ -15,7 +16,8 @@ export default ( logger, { category, organization, oauthToken } ) => {
       CHANGELOG: `https://raw.githubusercontent.com/${organization}/[repository]/[branch]/CHANGELOG.md`
    };
 
-   const { getText, getJson, clearCache } = cachedFetch( 0 );
+   const resourceFetcher = repositoryResourceFetcher( logger, { resourceCachePath } );
+   const { getJson, clearCache } = cachedFetch( 60 * 60 * 1000 );
    const api = {
       getRepositories,
       getRepositoryById,
@@ -50,17 +52,20 @@ export default ( logger, { category, organization, oauthToken } ) => {
 
    function createRepository( repositoryData ) {
 
-      let cachedReleases;
+      const normalizedData = {
+         id: repositoryData.id,
+         name: repositoryData.name,
+         pushedAt: repositoryData.pushed_at,
+         organization: repositoryData.full_name.split( '/' )[0]
+      };
+      const get = url => resourceFetcher.fetch( normalizedData, url, headers );
 
       const proto = {
          getReleases() {
-            if( cachedReleases ) {
-               return Promise.resolve( cachedReleases );
-            }
-
             const url = urlTemplates.TAGS.replace( '[repository]', repositoryData.name );
 
-            return getJson( url, headers )
+            return get( url )
+               .then( data => JSON.parse( data ) )
                .then( tags => tags.map( tag => tag.name ) )
                .then( versions => {
                   const versionData = versions.reduce( ( acc, version ) => {
@@ -82,21 +87,31 @@ export default ( logger, { category, organization, oauthToken } ) => {
 
                   return Object.keys( versionData ).map( key => versionData[ key ] );
                } )
-               .then( releases => cachedReleases = releases );
+               .catch( err => {
+                  logger.error( `Failed to get releases for repository "${repositoryData.name}" (URL: "${url}")` );
+                  return logPossibleFetchError( err );
+               } );
          },
 
 
          getReleaseByVersion( version ) {
             const baseUrl = urlTemplates.CHANGELOG.replace( '[repository]', repositoryData.name );
             const releaseUrl = baseUrl.replace( '[branch]', `release-${version}` );
-            return getText( releaseUrl, headers )
+            return get( releaseUrl )
                .then( changelog => {
                   return {
                      title: `v${version}`,
                      changelog: changelog
                   };
-               }, err => {
-                  logger.log( 'rejected: %s', err );
+               } )
+               .catch( err => {
+                  // older releases often lack a changelog file. Hence we ignore this case here
+                  return {
+                     title: `v${version}`,
+                     changelog: ''
+                  };
+                  logger.error( `Failed to get release for verion "${version}" (URL: "${releaseUrl}")` );
+                  return logPossibleFetchError( err );
                } );
          }
       };
@@ -107,19 +122,19 @@ export default ( logger, { category, organization, oauthToken } ) => {
             return Object.create( proto, {
                id: {
                   enumerable: true,
-                  value: repositoryData.id
+                  value: normalizedData.id
                },
                name: {
                   enumerable: true,
-                  value: repositoryData.name
+                  value: normalizedData.name
                },
                pushedAt: {
                   enumerable: true,
-                  value: repositoryData.pushed_at
+                  value: normalizedData.pushedAt
                },
                organization: {
                   enumerable: true,
-                  value: repositoryData.full_name.split( '/' )[0]
+                  value: normalizedData.organization
                },
                mostRecentVersion: {
                   enumerable: true,
@@ -127,6 +142,19 @@ export default ( logger, { category, organization, oauthToken } ) => {
                }
             } );
          } );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function logPossibleFetchError( err ) {
+      if( err.headers && err.status ) {
+         logger.error( `Response Status: %s`, err.status );
+         logger.error( `Response Headers: %j`, err.headers );
+      }
+      else {
+         logger.error( `Error: `, err );
+      }
+      return Promise.reject( err );
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

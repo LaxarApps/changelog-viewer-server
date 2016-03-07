@@ -81,7 +81,7 @@ export default ( logger, config ) => {
                adapters[ source.category ] = [];
             }
 
-            const adapter = factory( logger, source );
+            const adapter = factory( logger, source, config );
             adapter.__id = index;
             adapters[ source.category ].push( adapter );
          } );
