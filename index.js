@@ -1,7 +1,7 @@
 'use strict';var _slicedToArray = function () {function sliceIterator(arr, i) {var _arr = [];var _n = true;var _d = false;var _e = undefined;try {for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {_arr.push(_s.value);if (i && _arr.length === i) break;}} catch (err) {_d = true;_e = err;} finally {try {if (!_n && _i["return"]) _i["return"]();} finally {if (_d) throw _e;}}return _arr;}return function (arr, i) {if (Array.isArray(arr)) {return arr;} else if (Symbol.iterator in Object(arr)) {return sliceIterator(arr, i);} else {throw new TypeError("Invalid attempt to destructure non-iterable instance");}};}(); /**
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        * Copyright 2015 aixigo AG
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        * Released under the MIT license.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */var _fs = require('fs');var _http = require('http');var _es6Promise = require('es6-promise');var _hal = require('hal');var _connect = require('connect');var _connect2 = _interopRequireDefault(_connect);var _routes = require('routes');var _routes2 = _interopRequireDefault(_routes);var _url = require('url');var _url2 = _interopRequireDefault(_url);var _adapter_broker = require('./lib/adapter_broker');var _adapter_broker2 = _interopRequireDefault(_adapter_broker);var _cached_fetch = require('./lib/cached_fetch');var _cached_fetch2 = _interopRequireDefault(_cached_fetch);function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}function _toConsumableArray(arr) {if (Array.isArray(arr)) {for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {arr2[i] = arr[i];}return arr2;} else {return Array.from(arr);}}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */var _fs = require('fs');var _http = require('http');var _es6Promise = require('es6-promise');var _hal = require('hal');var _connect = require('connect');var _connect2 = _interopRequireDefault(_connect);var _routes = require('routes');var _routes2 = _interopRequireDefault(_routes);var _url = require('url');var _url2 = _interopRequireDefault(_url);var _winston = require('winston');var _winston2 = _interopRequireDefault(_winston);var _adapter_broker = require('./lib/adapter_broker');var _adapter_broker2 = _interopRequireDefault(_adapter_broker);var _cached_fetch = require('./lib/cached_fetch');var _cached_fetch2 = _interopRequireDefault(_cached_fetch);function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}function _toConsumableArray(arr) {if (Array.isArray(arr)) {for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {arr2[i] = arr[i];}return arr2;} else {return Array.from(arr);}}
 
 
 
@@ -9,6 +9,19 @@
 
 
 
+
+
+
+
+_winston2.default.handleExceptions(new _winston2.default.transports.File({ filename: 'logs/exceptions.log' }));
+var logger = new _winston2.default.Logger({ 
+   exitOnError: false, 
+   transports: [
+   new _winston2.default.transports.Console(), 
+   new _winston2.default.transports.File({ 
+      filename: 'logs/server.log', 
+      maxsize: 1e+6, // rotation after 1MB
+      zippedArchive: true })] });
 
 
 
@@ -17,10 +30,10 @@ new _es6Promise.Promise(function (resolve, reject) {
    (0, _fs.readFile)('./config.json', function (err, string) {return err ? reject(err) : resolve(string);});}).
 
 then(function (string) {return JSON.parse(string);}).
-then(startServer, function (err) {return console.error('An error occurred while reading the config file (config.json): ' + err);}).
+then(startServer, function (err) {return logger.error('An error occurred while reading the config file (config.json): ' + err);}).
 catch(function (err) {
-   console.error('An error occurred while starting the server: ' + err);
-   console.error('Stack: ', err.stack);});
+   logger.error('An error occurred while starting the server: ' + err);
+   logger.error('Stack: ', err.stack);});
 
 
 var routes = { 
@@ -50,16 +63,18 @@ var relations = {
 
 function startServer(config) {
 
+   logger.info('Started server at %s', new Date());
+
    var router = new _routes2.default();
    var server = (0, _connect2.default)();
-   var broker = (0, _adapter_broker2.default)(config);
+   var broker = (0, _adapter_broker2.default)(logger, config);
 
    server.use(function (req, res) {
       var path = _url2.default.parse(req.url).pathname;
       var match = router.match(path);
 
       if (!match) {
-         console.warn('Found no match for url "' + req.url + '".');
+         logger.warn('Found no match for url "' + req.url + '".');
          res.statusCode = 404;
          res.end();
          return;}
@@ -123,8 +138,8 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
    addHalRoute(routes.COMPONENT_MAP, function () {
       return readComponentMap(config.componentMapUrl).
       then(function (componentMap) {return componentMap ? resourceForComponentMap(componentMap) : null;}, function (err) {
-         console.error(err);
-         console.error(err.stack);
+         logger.error(err);
+         logger.error(err.stack);
          return null;});});
 
 
@@ -237,10 +252,15 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
          catch(function (error) {
             var errorMessage = typeof error === 'string' ? error : 'Unknown internal error';
             if (error instanceof Error) {
-               console.error('An error occurred while serving request to ' + route + ': ' + error);
-               console.error('URL: ' + url);
-               console.error('Stack: ', error.stack);}
+               logger.error('An error occurred while serving request to ' + route + ': ' + error);
+               logger.error('URL: ' + url);
+               logger.error('Stack: %s', error.stack);} else 
 
+            {
+               logger.error('An error occurred while serving request to ' + route + ': ' + error);
+               logger.error('URL: ' + url);}
+
+            console.log('WTF?!', error);
 
             res.statusCode = 500;
             res.write(errorMessage);
@@ -284,26 +304,27 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
 
       alreadyRefreshing = true;
 
+      var seenLinks = [];
       var baseUrl = 'http://localhost:' + config.port;
       var startTime = Date.now();
-      return getJson('' + baseUrl + routes.CATEGORIES).
-      then(followAllLinksRecursively.bind(null, [])).
-      then(function (links) {
-         console.log('Refreshed cache in ' + (Date.now() - startTime) + 'ms. Followed ' + links.length + ' links.');}, 
-      function (err) {return console.error(err);}).
+      return getJson('' + baseUrl + routes.CATEGORIES + '/frontend').
+      then(followAllLinksRecursively).
+      then(function () {
+         logger.log('Refreshed cache in ' + (Date.now() - startTime) + 'ms. Followed ' + seenLinks.length + ' links.');}, 
+      function (err) {return logger.error(err);}).
       then(function () {return alreadyRefreshing = false;});
 
-      function followAllLinksRecursively(seenLinks, halResponse) {
+      function followAllLinksRecursively(halResponse) {
          if (!halResponse || !halResponse._links) {
-            return _es6Promise.Promise.resolve(seenLinks);}
+            return _es6Promise.Promise.resolve();}
 
 
          var links = Object.keys(halResponse._links).
          filter(function (relation) {return relation !== 'self';}).
          map(function (relation) {return halResponse._links[relation];}).
          map(function (linkObject) {return Array.isArray(linkObject) ? linkObject : [linkObject];}).
-         reduce(function (links, linkObject) {
-            return linkObject.reduce(function (objectLinks, _ref9) {var href = _ref9.href;
+         reduce(function (links, linkObjects) {
+            return linkObjects.reduce(function (objectLinks, _ref9) {var href = _ref9.href;
                if (seenLinks.indexOf(href) === -1) {
                   seenLinks.push(href);
                   return [].concat(_toConsumableArray(objectLinks), ['' + baseUrl + href]);}
@@ -313,12 +334,8 @@ function addRoutes(config, _ref) {var router = _ref.router;var broker = _ref.bro
          []);
 
          return links.reduce(function (promise, link) {
-            return promise.
-            then(function (seenLinks) {
-               return getJson(link).
-               then(function (response) {return followAllLinksRecursively(seenLinks, response);});});}, 
-
-         _es6Promise.Promise.resolve(seenLinks));}}}
+            return promise.then(function () {return getJson(link);}).then(followAllLinksRecursively);}, 
+         _es6Promise.Promise.resolve());}}}
 
 
 

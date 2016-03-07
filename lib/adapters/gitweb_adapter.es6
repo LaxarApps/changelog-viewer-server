@@ -5,11 +5,10 @@
 import { Promise } from 'es6-promise';
 import cachedFetch from '../cached_fetch';
 import { parseString as parseXmlString } from 'xml2js';
-import { exec } from 'child_process';
 import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
 
 
-export default ( { serverUrl, repositoriesRoot } ) => {
+export default ( logger, { serverUrl, repositoriesRoot } ) => {
 
    const urlTemplates = {
       REPOSITORIES: `${serverUrl}gitweb/?a=project_index;pf=${repositoriesRoot}`,
@@ -107,7 +106,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                            acc[ versionTag ] = {
                               versions: [],
                               title: versionTag
-                           }
+                           };
                         }
 
                         acc[ versionTag ].versions.push( name );
@@ -129,9 +128,9 @@ export default ( { serverUrl, repositoriesRoot } ) => {
                   return {
                      title: `v${version}`,
                      changelog: changelog
-                  }
+                  };
                }, err => {
-                  console.log( 'rejected:', err );
+                  logger.log( 'rejected: %s', err );
                } );
          }
       };
@@ -139,7 +138,7 @@ export default ( { serverUrl, repositoriesRoot } ) => {
       return proto.getReleases()
          .then( getMostRecentVersionFromReleases )
          .then( mostRecentVersion => {
-            let repository = Object.create( proto );
+            const repository = Object.create( proto );
             repositoryData.mostRecentVersion = mostRecentVersion;
             Object.keys( repositoryData )
                .forEach( key => {

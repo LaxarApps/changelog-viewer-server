@@ -2,6 +2,8 @@
 
 ## Last Changes
 
+- [#17](https://github.com/LaxarApps/changelog-viewer-server/issues/17): logging: using winston for persistent logging
+
 
 ## v0.6.1
 
