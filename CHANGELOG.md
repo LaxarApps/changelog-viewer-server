@@ -2,6 +2,9 @@
 
 ## Last Changes
 
+
+## v0.7.1
+
 - [#18](https://github.com/LaxarApps/changelog-viewer-server/issues/18): caching: fixed cache hash generation for gitweb
 
 
