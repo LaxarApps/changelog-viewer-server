@@ -3,6 +3,7 @@
  * Released under the MIT license.
  */
 import { Promise } from 'es6-promise';
+import sha1 from 'sha1';
 import cachedFetch from '../cached_fetch';
 import repositoryResourceFetcher from '../repository_resource_fetcher';
 import { getMostRecentVersionFromReleases, VERSION_MATCHER } from './adapter_helper';
@@ -58,7 +59,8 @@ export default ( logger, { category, organization, oauthToken }, { resourceCache
          pushedAt: repositoryData.pushed_at,
          organization: repositoryData.full_name.split( '/' )[0]
       };
-      const get = url => resourceFetcher.fetch( normalizedData, url, headers );
+      const dataForFetch = { ...normalizedData, cacheHash: sha1( normalizedData.pushedAt ) };
+      const get = url => resourceFetcher.fetch( dataForFetch, url, headers );
 
       const proto = {
          getReleases() {
