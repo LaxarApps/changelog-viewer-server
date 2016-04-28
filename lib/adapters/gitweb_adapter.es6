@@ -3,6 +3,7 @@
  * Released under the MIT license.
  */
 import { Promise } from 'es6-promise';
+import sha1 from 'sha1';
 import cachedFetch from '../cached_fetch';
 import repositoryResourceFetcher from '../repository_resource_fetcher';
 import { parseString as parseXmlString } from 'xml2js';
@@ -43,25 +44,37 @@ export default ( logger, { serverUrl, repositoriesRoot }, { resourceCachePath } 
 
    function getRepositoryById( repositoryId ) {
       const url = urlTemplates.REPOSITORY.replace( '[repository]', repositoryId );
-      return getText( url, headers )
-         .then( text => {
-            if( !text ) {
-               return null;
+      const tagsUrl = urlTemplates.REPOSITORY_TAGS.replace( '[repository]', repositoryId );
+
+      return Promise.all( [ getText( url, headers ), getText( tagsUrl, headers ) ] )
+         .then( ( [ repoText, tagsText ] ) => {
+            if( !repoText ) {
+               return [ null, null ];
             }
 
-            return new Promise( ( resolve, reject ) => {
-               parseXmlString( text, ( err, result ) => err ? reject( err ) : resolve( result ) );
-            } );
+            return Promise.all( [
+               new Promise( ( resolve, reject ) => {
+                  parseXmlString( repoText, ( err, result ) => err ? reject( err ) : resolve( result ) );
+               } ),
+               new Promise( ( resolve, reject ) => {
+                  parseXmlString( tagsText, ( err, result ) => err ? reject( err ) : resolve( result ) );
+               } )
+            ] );
          } )
-         .then( tree => {
-            const updated = ( tree && tree.feed && tree.feed.updated && tree.feed.updated[0] ) || null;
+         .then( ( [ repoTree, tagsTree ] ) => {
+            // the underscore references a node's character content
+            // we don't want to have the newest version here, but the tag most recently pushed
+            const mostRecentTag = path( tagsTree, 'html.body.0.table.0.tr.0.td.1.a.0._', '' ).trim();
+            const updated = path( repoTree, 'feed.updated.0', null );
             // fuzzy logic for organizations: take the path fragment right before the *.git part
             const [ , organization, name ] = repositoryId.match( /([^\/]+)\/([^\/]+)\.git$/ );
+
             return {
                id: repositoryId,
                name: name,
                organization: organization,
-               pushedAt: updated
+               pushedAt: updated,
+               cacheHash: sha1( mostRecentTag )
             };
          } )
          .then( createRepository );
@@ -70,9 +83,7 @@ export default ( logger, { serverUrl, repositoriesRoot }, { resourceCachePath } 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
    function createRepository( repositoryData ) {
-
       const get = url => resourceFetcher.fetch( repositoryData, url, headers );
-
       const proto = {
          getReleases() {
             const url = urlTemplates.REPOSITORY_TAGS.replace( '[repository]', repositoryData.id );
@@ -88,18 +99,15 @@ export default ( logger, { serverUrl, repositoriesRoot }, { resourceCachePath } 
                   } );
                } )
                .then( tree => {
-                  const body = ( tree && tree.html && tree.html.body && tree.html.body[0] );
-                  const table = ( body && body.table && body.table[0] );
-                  const tds = ( table && table.tr && table.tr.map( tr => tr.td && tr.td[1] ) );
-                  const as = tds && tds.map( td => td.a && td.a[0] );
-                  const texts = as && as.map( a => a._ && a._.trim() );
-                  return texts || [];
+                  const tagTableRows = path( tree, 'html.body.0.table.0.tr', [] );
+                  // the underscore references a node's character content
+                  return tagTableRows.map( row => path( row, 'td.1.a.0._', '' ).trim() );
                } )
                .then( tags => {
                   const versionData = tags.reduce( (acc, tag) => {
                      const match = VERSION_MATCHER.exec( tag );
                      if( match ) {
-                        const [ name, major, minor, patch ] = match;
+                        const [ name, major, minor/*, patch*/ ] = match;
                         const versionTag = `v${major}.${minor}.x`;
                         if( !( versionTag in acc ) ) {
                            acc[ versionTag ] = {
@@ -173,6 +181,13 @@ export default ( logger, { serverUrl, repositoriesRoot }, { resourceCachePath } 
          logger.error( `Error: `, err );
       }
       return Promise.reject( err );
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+   function path( obj, path, optionalDefault ) {
+      const val = path.split( '.' ).reduce( ( node, fragment ) => node ? node[ fragment ] : node, obj );
+      return val !== undefined ? val : optionalDefault;
    }
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////

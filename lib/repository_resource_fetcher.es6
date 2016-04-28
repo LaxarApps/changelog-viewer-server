@@ -20,7 +20,7 @@ export default ( logger, { resourceCachePath } ) => {
          const filename = cacheFileName( repository, url );
 
          const cacheData = memCache[ filename ];
-         if( cacheData && cacheData.pushedAt === repository.pushedAt ) {
+         if( cacheData && cacheData.cacheHash === repository.cacheHash ) {
             logger.verbose( `FROM CACHE (memory): ${url}` );
             return Promise.resolve( cacheData.data );
          }
@@ -34,7 +34,7 @@ export default ( logger, { resourceCachePath } ) => {
                return fs.readFile( filename )
                   .then( string => JSON.parse( string ) )
                   .then( cacheData => {
-                     if( cacheData.pushedAt !== repository.pushedAt ) {
+                     if( cacheData.cacheHash !== repository.cacheHash ) {
                         return null;
                      }
 
@@ -54,7 +54,7 @@ export default ( logger, { resourceCachePath } ) => {
                   .then( data => {
                      memCache[ filename ] = {
                         url: url,
-                        pushedAt: repository.pushedAt,
+                        cacheHash: repository.cacheHash,
                         data: data
                      };
                      return fs.writeFile( filename, JSON.stringify( memCache[ filename ], null, 2 ) )
